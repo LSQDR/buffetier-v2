@@ -1,5 +1,7 @@
 import os
 import psycopg2
+import hashlib
+
 
 def get_neon_connection():
     """Get connection to Neon Postgres"""
@@ -105,5 +107,77 @@ def update_order_status(order_id, status):
             )
             conn.commit()
             return True
+    finally:
+        conn.close()
+
+def hash_password(password):
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def register_user(email, name, phone, password):
+    """Register a new user with password"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            password_hash = hash_password(password)
+            cur.execute("""
+                INSERT INTO users (email, name, phone, password_hash)
+                VALUES (%s, %s, %s, %s)
+                RETURNING user_id
+            """, (email, name, phone, password_hash))
+            user_id = cur.fetchone()[0]
+            conn.commit()
+            return user_id
+    except Exception as e:
+        conn.rollback()
+        return None
+    finally:
+        conn.close()
+
+def authenticate_user(email, password):
+    """Authenticate user by email and password"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            password_hash = hash_password(password)
+            cur.execute("""
+                SELECT user_id, email, name, phone
+                FROM users
+                WHERE email = %s AND password_hash = %s
+            """, (email, password_hash))
+            user = cur.fetchone()
+            
+            if user:
+                return {
+                    'user_id': user[0],
+                    'email': user[1],
+                    'name': user[2],
+                    'phone': user[3]
+                }
+            return None
+    finally:
+        conn.close()
+
+def get_user_by_id(user_id):
+    """Get user details by ID"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT user_id, email, name, phone, created_at
+                FROM users
+                WHERE user_id = %s
+            """, (user_id,))
+            user = cur.fetchone()
+            
+            if user:
+                return {
+                    'user_id': user[0],
+                    'email': user[1],
+                    'name': user[2],
+                    'phone': user[3],
+                    'created_at': str(user[4])
+                }
+            return None
     finally:
         conn.close()
