@@ -1,1 +1,5 @@
 .env
+app.yaml
+*.pyc
+__pycache__/
+.pytest_cache/
