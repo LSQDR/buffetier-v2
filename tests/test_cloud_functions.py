@@ -48,7 +48,7 @@ def test_process_order_empty_items():
     assert response.status_code == 400
     data = response.json()
     assert 'error' in data
-    
+
 
 GET_MENU_URL = os.environ.get('GET_MENU_FUNCTION_URL')
 
@@ -87,3 +87,43 @@ def test_get_menu_available_only():
     # All returned items should be available
     for item in data['menu']:
         assert item['available'] == True
+
+
+UPDATE_ORDER_URL = os.environ.get('UPDATE_ORDER_FUNCTION_URL')
+
+@pytest.mark.skipif(not UPDATE_ORDER_URL, reason="Function URL not set")
+def test_update_order_function():
+    """Test updating order status"""
+    response = requests.post(UPDATE_ORDER_URL, json={
+        'order_id': 1,
+        'status': 'completed'
+    })
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data['success'] == True
+    assert data['new_status'] == 'completed'
+
+@pytest.mark.skipif(not UPDATE_ORDER_URL, reason="Function URL not set")
+def test_update_order_invalid_status():
+    """Test that invalid status is rejected"""
+    response = requests.post(UPDATE_ORDER_URL, json={
+        'order_id': 1,
+        'status': 'invalid'
+    })
+    
+    assert response.status_code == 400
+    data = response.json()
+    assert 'error' in data
+
+@pytest.mark.skipif(not UPDATE_ORDER_URL, reason="Function URL not set")
+def test_update_order_not_found():
+    """Test updating non-existent order"""
+    response = requests.post(UPDATE_ORDER_URL, json={
+        'order_id': 99999,
+        'status': 'completed'
+    })
+    
+    assert response.status_code == 404
+    data = response.json()
+    assert 'error' in data
