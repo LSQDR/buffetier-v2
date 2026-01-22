@@ -127,6 +127,54 @@ def dashboard():
     
     return render_template('dashboard.html', user=user, orders=orders)
 
+@app.route('/cart')
+@login_required
+def cart():
+    """Shopping cart page"""
+    cart_items = session.get('cart', [])
+    total = sum(item['price'] * item['quantity'] for item in cart_items)
+    return render_template('cart.html', cart_items=cart_items, total=total)
+
+@app.route('/checkout', methods=['POST'])
+@login_required
+def checkout():
+    """Process checkout and create order"""
+    cart_items = session.get('cart', [])
+    
+    if not cart_items:
+        flash('Your cart is empty', 'error')
+        return redirect(url_for('menu_page'))
+    
+    # Calculate total
+    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
+    
+    # Prepare items for database
+    items = []
+    for item in cart_items:
+        items.append({
+            'item_id': item['item_id'],
+            'name': item['name'],
+            'price': item['price'],
+            'quantity': item['quantity']
+        })
+    
+    # Create order in database
+    try:
+        user_id = session.get('user_id')
+        table_number = 0  # Can be updated later
+        order_id = neon_db.create_order(user_id, table_number, total_price, items)
+        
+        # Clear cart after successful order
+        session['cart'] = []
+        session.modified = True
+        
+        flash(f'Order #{order_id} placed successfully! Total: £{total_price:.2f}', 'success')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Error placing order: {str(e)}', 'error')
+        return redirect(url_for('cart'))
+
 
 # ============================================
 # API ROUTES (JSON Responses)
@@ -212,6 +260,92 @@ def api_update_order(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/cart/add', methods=['POST'])
+@login_required
+def api_add_to_cart():
+    """Add item to shopping cart"""
+    data = request.get_json()
+    
+    # Initialize cart in session if it doesn't exist
+    if 'cart' not in session:
+        session['cart'] = []
+    
+    cart = session['cart']
+    item_id = str(data.get('item_id'))
+    
+    # Check if item already in cart
+    found = False
+    for item in cart:
+        if item['item_id'] == item_id:
+            item['quantity'] += 1
+            found = True
+            break
+    
+    # Add new item if not found
+    if not found:
+        cart.append({
+            'item_id': item_id,
+            'name': data.get('name'),
+            'price': float(data.get('price')),
+            'quantity': int(data.get('quantity', 1))
+        })
+    
+    session['cart'] = cart
+    session.modified = True
+    
+    return jsonify({'success': True, 'cart_count': len(cart)}), 200
+
+
+@app.route('/api/cart/count', methods=['GET'])
+def api_cart_count():
+    """Get cart item count"""
+    if 'cart' not in session:
+        return jsonify({'count': 0}), 200
+    
+    total_items = sum(item['quantity'] for item in session['cart'])
+    return jsonify({'count': total_items}), 200
+
+
+@app.route('/api/cart/remove/<item_id>', methods=['DELETE'])
+@login_required
+def api_remove_from_cart(item_id):
+    """Remove item from cart"""
+    if 'cart' in session:
+        session['cart'] = [item for item in session['cart'] if item['item_id'] != item_id]
+        session.modified = True
+        return jsonify({'success': True}), 200
+    return jsonify({'success': False}), 400
+
+
+@app.route('/api/cart/update', methods=['PUT'])
+@login_required
+def api_update_cart():
+    """Update item quantity in cart"""
+    data = request.get_json()
+    item_id = str(data.get('item_id'))
+    quantity = int(data.get('quantity'))
+    
+    if 'cart' in session:
+        for item in session['cart']:
+            if item['item_id'] == item_id:
+                if quantity > 0:
+                    item['quantity'] = quantity
+                else:
+                    session['cart'].remove(item)
+                break
+        session.modified = True
+        return jsonify({'success': True}), 200
+    
+    return jsonify({'success': False}), 400
+
+
+@app.route('/api/cart/clear', methods=['POST'])
+@login_required
+def api_clear_cart():
+    """Clear the shopping cart"""
+    session['cart'] = []
+    session.modified = True
+    return jsonify({'success': True}), 200
 
 # ============================================
 # ERROR HANDLERS
