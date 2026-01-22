@@ -1,3 +1,8 @@
+"""
+Buffetier - Restaurant Ordering System
+A cloud-based restaurant ordering application using Flask, Neon PostgreSQL, and MongoDB.
+"""
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -6,17 +11,28 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 from database import neon_db, mongo_db
 from functools import wraps
 
-
+# ============================================
+# APPLICATION SETUP
+# ============================================
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
 
 # ============================================
 # AUTHENTICATION DECORATOR
 # ============================================
 
 def login_required(f):
-    """Decorator to require login for routes"""
+    """
+    Decorator to require login for protected routes.
+    
+    Args:
+        f: The function to wrap
+        
+    Returns:
+        Wrapped function that checks for user session
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
@@ -27,26 +43,48 @@ def login_required(f):
 
 
 # ============================================
-# WEB ROUTES (HTML Pages)
+# PUBLIC WEB ROUTES
 # ============================================
 
 @app.route('/')
 def home():
-    """Home page"""
+    """Render home page."""
     return render_template('index.html')
+
 
 @app.route('/menu')
 def menu_page():
-    """Menu display page"""
+    """
+    Display restaurant menu page.
+    
+    Fetches all menu items from MongoDB and renders them.
+    
+    Returns:
+        Rendered menu template with items
+    """
     try:
         items = mongo_db.get_all_menu_items()
         return render_template('menu.html', items=items)
     except Exception as e:
-        return f"Error loading menu: {str(e)}", 500
+        flash(f'Error loading menu: {str(e)}', 'error')
+        return redirect(url_for('home'))
+
+
+# ============================================
+# AUTHENTICATION ROUTES
+# ============================================
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """User registration"""
+    """
+    Handle user registration.
+    
+    GET: Display registration form
+    POST: Process registration and create user account
+    
+    Returns:
+        Registration template or redirect to dashboard
+    """
     if request.method == 'POST':
         email = request.form.get('email')
         name = request.form.get('name')
@@ -54,7 +92,7 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
-        # Validation
+        # Validate input
         if not all([email, name, phone, password, confirm_password]):
             flash('All fields are required', 'error')
             return render_template('register.html')
@@ -63,13 +101,13 @@ def register():
             flash('Passwords do not match', 'error')
             return render_template('register.html')
         
-        # Check if user exists
+        # Check if user already exists
         existing_user = neon_db.get_user_by_email(email)
         if existing_user:
             flash('Email already registered', 'error')
             return render_template('register.html')
         
-        # Create user
+        # Create new user
         user_id = neon_db.register_user(email, name, phone, password)
         
         if user_id:
@@ -86,7 +124,15 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """User login"""
+    """
+    Handle user login.
+    
+    GET: Display login form
+    POST: Authenticate user and create session
+    
+    Returns:
+        Login template or redirect to dashboard
+    """
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -95,6 +141,7 @@ def login():
             flash('Email and password are required', 'error')
             return render_template('login.html')
         
+        # Authenticate user
         user = neon_db.authenticate_user(email, password)
         
         if user:
@@ -111,41 +158,69 @@ def login():
 
 @app.route('/logout')
 def logout():
-    """User logout"""
+    """
+    Log out user and clear session.
+    
+    Returns:
+        Redirect to home page
+    """
     session.clear()
     flash('You have been logged out', 'success')
     return redirect(url_for('home'))
 
 
+# ============================================
+# PROTECTED USER ROUTES
+# ============================================
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """User dashboard"""
+    """
+    Display user dashboard with order history.
+    
+    Returns:
+        Dashboard template with user info and orders
+    """
     user_id = session.get('user_id')
     user = neon_db.get_user_by_id(user_id)
     orders = neon_db.get_all_orders(user_id)
     
     return render_template('dashboard.html', user=user, orders=orders)
 
+
 @app.route('/cart')
 @login_required
 def cart():
-    """Shopping cart page"""
+    """
+    Display shopping cart page.
+    
+    Returns:
+        Cart template with items and total
+    """
     cart_items = session.get('cart', [])
     total = sum(item['price'] * item['quantity'] for item in cart_items)
     return render_template('cart.html', cart_items=cart_items, total=total)
 
+
 @app.route('/checkout', methods=['POST'])
 @login_required
 def checkout():
-    """Process checkout and create order"""
+    """
+    Process checkout and create order.
+    
+    Validates cart, creates order in database, and clears cart.
+    
+    Returns:
+        Redirect to dashboard with success message or cart with error
+    """
     cart_items = session.get('cart', [])
     
     if not cart_items:
         flash('Your cart is empty', 'error')
         return redirect(url_for('menu_page'))
     
-    # Calculate total
+    # Calculate total price
     total_price = sum(item['price'] * item['quantity'] for item in cart_items)
     
     # Prepare items for database
@@ -161,7 +236,7 @@ def checkout():
     # Create order in database
     try:
         user_id = session.get('user_id')
-        table_number = 0  # Can be updated later
+        table_number = 0  # Can be updated later with table selection
         order_id = neon_db.create_order(user_id, table_number, total_price, items)
         
         # Clear cart after successful order
@@ -177,12 +252,20 @@ def checkout():
 
 
 # ============================================
-# API ROUTES (JSON Responses)
+# API ROUTES - MENU
 # ============================================
 
 @app.route('/api/menu', methods=['GET'])
 def api_get_menu():
-    """API: Get all menu items or filter by category"""
+    """
+    API endpoint to get menu items.
+    
+    Query Parameters:
+        category (optional): Filter by category
+    
+    Returns:
+        JSON array of menu items
+    """
     try:
         category = request.args.get('category')
         
@@ -195,9 +278,24 @@ def api_get_menu():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ============================================
+# API ROUTES - ORDERS
+# ============================================
+
 @app.route('/api/orders', methods=['POST'])
 def api_create_order():
-    """API: Create a new order"""
+    """
+    API endpoint to create a new order.
+    
+    Request Body:
+        user_id: int
+        table_number: int (optional)
+        items: list of {item_id, name, price, quantity}
+    
+    Returns:
+        JSON with order_id and total price
+    """
     try:
         data = request.get_json()
         
@@ -216,17 +314,25 @@ def api_create_order():
         order_id = neon_db.create_order(user_id, table_number, total_price, items)
         
         return jsonify({
-            'success': True,
             'order_id': order_id,
-            'total_price': total_price
+            'total': total_price
         }), 201
         
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+
 @app.route('/api/orders/<int:user_id>', methods=['GET'])
 def api_get_user_orders(user_id):
-    """API: Get all orders for a user"""
+    """
+    API endpoint to get all orders for a user.
+    
+    Args:
+        user_id: User ID
+    
+    Returns:
+        JSON array of orders
+    """
     try:
         orders = neon_db.get_all_orders(user_id)
         
@@ -244,9 +350,21 @@ def api_get_user_orders(user_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @app.route('/api/orders/<int:order_id>', methods=['PUT'])
 def api_update_order(order_id):
-    """API: Update order status"""
+    """
+    API endpoint to update order status.
+    
+    Args:
+        order_id: Order ID
+    
+    Request Body:
+        status: New status string
+    
+    Returns:
+        JSON confirmation
+    """
     try:
         data = request.get_json()
         status = data.get('status')
@@ -260,10 +378,26 @@ def api_update_order(order_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+# ============================================
+# API ROUTES - SHOPPING CART
+# ============================================
+
 @app.route('/api/cart/add', methods=['POST'])
 @login_required
 def api_add_to_cart():
-    """Add item to shopping cart"""
+    """
+    API endpoint to add item to shopping cart.
+    
+    Request Body:
+        item_id: string
+        name: string
+        price: float
+        quantity: int
+    
+    Returns:
+        JSON with success status and cart count
+    """
     data = request.get_json()
     
     # Initialize cart in session if it doesn't exist
@@ -298,7 +432,12 @@ def api_add_to_cart():
 
 @app.route('/api/cart/count', methods=['GET'])
 def api_cart_count():
-    """Get cart item count"""
+    """
+    API endpoint to get cart item count.
+    
+    Returns:
+        JSON with total item count
+    """
     if 'cart' not in session:
         return jsonify({'count': 0}), 200
     
@@ -309,7 +448,15 @@ def api_cart_count():
 @app.route('/api/cart/remove/<item_id>', methods=['DELETE'])
 @login_required
 def api_remove_from_cart(item_id):
-    """Remove item from cart"""
+    """
+    API endpoint to remove item from cart.
+    
+    Args:
+        item_id: Item ID to remove
+    
+    Returns:
+        JSON with success status
+    """
     if 'cart' in session:
         session['cart'] = [item for item in session['cart'] if item['item_id'] != item_id]
         session.modified = True
@@ -320,7 +467,16 @@ def api_remove_from_cart(item_id):
 @app.route('/api/cart/update', methods=['PUT'])
 @login_required
 def api_update_cart():
-    """Update item quantity in cart"""
+    """
+    API endpoint to update item quantity in cart.
+    
+    Request Body:
+        item_id: string
+        quantity: int
+    
+    Returns:
+        JSON with success status
+    """
     data = request.get_json()
     item_id = str(data.get('item_id'))
     quantity = int(data.get('quantity'))
@@ -342,10 +498,16 @@ def api_update_cart():
 @app.route('/api/cart/clear', methods=['POST'])
 @login_required
 def api_clear_cart():
-    """Clear the shopping cart"""
+    """
+    API endpoint to clear the shopping cart.
+    
+    Returns:
+        JSON with success status
+    """
     session['cart'] = []
     session.modified = True
     return jsonify({'success': True}), 200
+
 
 # ============================================
 # ERROR HANDLERS
@@ -353,14 +515,18 @@ def api_clear_cart():
 
 @app.errorhandler(404)
 def not_found(e):
+    """Handle 404 errors."""
     return render_template('404.html'), 404
+
 
 @app.errorhandler(500)
 def server_error(e):
+    """Handle 500 errors."""
     return "Internal server error", 500
 
+
 # ============================================
-# RUN APP
+# APPLICATION ENTRY POINT
 # ============================================
 
 if __name__ == '__main__':

@@ -1,69 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buffetier - Restaurant Ordering System</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-        }
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            margin: 10px;
-            background-color: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .btn:hover {
-            background-color: #2980b9;
-        }
-        .links {
-            text-align: center;
-            margin-top: 30px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🍽️ Welcome to Buffetier</h1>
-        <p style="text-align: center; font-size: 18px; color: #7f8c8d;">
+{% extends "base.html" %}
+{% set show_navbar = False %}
+{% set no_container = True %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card" style="max-width: 800px; margin: 0 auto;">
+        <h1 style="text-align: center; color: #2c3e50;">🍽️ Welcome to Buffetier</h1>
+        <p style="text-align: center; font-size: 18px; color: #7f8c8d; margin: 20px 0;">
             Your all-you-can-eat restaurant ordering system
         </p>
         
-        <div class="links">
+        <div style="text-align: center; margin-top: 30px;">
             <a href="/menu" class="btn">View Menu</a>
-            <a href="/api/menu" class="btn">Menu API (JSON)</a>
             <a href="/register" class="btn">Register</a>
             <a href="/login" class="btn">Login</a>
         </div>
         
         <div style="margin-top: 40px; padding: 20px; background-color: #ecf0f1; border-radius: 5px;">
             <h3>Features:</h3>
-            <ul>
+            <ul style="margin-left: 20px; margin-top: 10px;">
                 <li>Browse our extensive buffet menu</li>
-                <li>Place orders online</li>
-                <li>Track order status</li>
+                <li>Place orders online with ease</li>
+                <li>Track your order status in real-time</li>
                 <li>Dual database system (SQL + NoSQL)</li>
+                <li>Secure user authentication</li>
             </ul>
         </div>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

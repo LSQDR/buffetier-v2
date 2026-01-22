@@ -1,126 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Buffetier</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-        .navbar {
-            background: #667eea;
-            padding: 15px 30px;
-            margin: -20px -20px 30px -20px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .navbar a {
-            color: white;
-            text-decoration: none;
-            margin-left: 20px;
-            padding: 8px 15px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 5px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        .welcome-box {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .orders-section {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 { color: #333; margin-bottom: 10px; }
-        h2 { color: #667eea; margin-bottom: 20px; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        .status {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .status.pending { background: #fff3cd; color: #856404; }
-        .status.completed { background: #d4edda; color: #155724; }
-        .no-orders {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-    </style>
-</head>
-<body>
-    <div class="navbar">
-        <h2>🍽️ Buffetier</h2>
-        <div>
-            <a href="/menu">Browse Menu</a>
-            <a href="/logout">Logout</a>
-        </div>
-    </div>
+{% extends "base.html" %}
+{% set show_navbar = True %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Welcome, {{ user.name }}!</h1>
+    <p style="color: #777;">Email: {{ user.email }} | Phone: {{ user.phone }}</p>
+</div>
+
+<div class="card">
+    <h2 style="color: #667eea; margin-bottom: 20px;">Your Order History</h2>
     
-    <div class="container">
-        <div class="welcome-box">
-            <h1>Welcome, {{ user.name }}!</h1>
-            <p style="color: #777;">Email: {{ user.email }} | Phone: {{ user.phone }}</p>
-        </div>
-        
-        <div class="orders-section">
-            <h2>Your Order History</h2>
-            
-            {% if orders %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in orders %}
-                    <tr>
-                        <td>#{{ order[0] }}</td>
-                        <td>£{{ "%.2f"|format(order[1]) }}</td>
-                        <td><span class="status {{ order[2] }}">{{ order[2] }}</span></td>
-                        <td>{{ order[3] }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="no-orders">
-                <p>You haven't placed any orders yet.</p>
-                <p><a href="/menu" style="color: #667eea;">Browse our menu</a> to get started!</p>
-            </div>
-            {% endif %}
-        </div>
+    {% if orders %}
+    <table>
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order[0] }}</td>
+                <td>£{{ "%.2f"|format(order[1]) }}</td>
+                <td><span class="status {{ order[2] }}">{{ order[2] }}</span></td>
+                <td>{{ order[3] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-cart">
+        <p>You haven't placed any orders yet.</p>
+        <p><a href="/menu" style="color: #667eea;">Browse our menu</a> to get started!</p>
     </div>
-</body>
-</html>
+    {% endif %}
+</div>
+{% endblock %}

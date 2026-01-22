@@ -26,7 +26,10 @@
     </div>
     {% endif %}
     
+    {% if not no_container %}
     <div class="container">
+    {% endif %}
+    
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -36,7 +39,10 @@
         {% endwith %}
         
         {% block content %}{% endblock %}
+    
+    {% if not no_container %}
     </div>
+    {% endif %}
     
     {% block extra_js %}{% endblock %}
 </body>
