@@ -1,8 +1,3 @@
-"""
-Buffetier - Restaurant Ordering System
-A cloud-based restaurant ordering application using Flask, Neon PostgreSQL, and MongoDB.
-"""
-
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -10,6 +5,7 @@ import os
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 from database import neon_db, mongo_db
 from functools import wraps
+from datetime import datetime, timedelta
 
 # ============================================
 # APPLICATION SETUP
@@ -18,6 +14,11 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+menu_cache = {
+    'items': None,
+    'timestamp': None,
+    'ttl': 300  # Cache for 5 minutes (300 seconds)
+}
 
 # ============================================
 # AUTHENTICATION DECORATOR
@@ -55,19 +56,39 @@ def home():
 @app.route('/menu')
 def menu_page():
     """
-    Display restaurant menu page.
+    Display restaurant menu page with caching.
     
-    Fetches all menu items from MongoDB and renders them.
+    Fetches all menu items from MongoDB and caches them for 5 minutes
+    to reduce connection latency.
     
     Returns:
         Rendered menu template with items
     """
+    global menu_cache
+    
     try:
-        items = mongo_db.get_all_menu_items()
+        # Check if cache is valid
+        now = datetime.now()
+        cache_valid = (
+            menu_cache['items'] is not None and 
+            menu_cache['timestamp'] is not None and 
+            (now - menu_cache['timestamp']).seconds < menu_cache['ttl']
+        )
+        
+        if not cache_valid:
+            # Fetch fresh data from MongoDB
+            items = mongo_db.get_all_menu_items()
+            menu_cache['items'] = items
+            menu_cache['timestamp'] = now
+        else:
+            # Use cached data
+            items = menu_cache['items']
+        
         return render_template('menu.html', items=items)
     except Exception as e:
         flash(f'Error loading menu: {str(e)}', 'error')
         return redirect(url_for('home'))
+
 
 
 # ============================================
