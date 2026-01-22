@@ -48,3 +48,42 @@ def test_process_order_empty_items():
     assert response.status_code == 400
     data = response.json()
     assert 'error' in data
+    
+
+GET_MENU_URL = os.environ.get('GET_MENU_FUNCTION_URL')
+
+@pytest.mark.skipif(not GET_MENU_URL, reason="Function URL not set")
+def test_get_menu_function():
+    """Test that get menu function returns menu items"""
+    response = requests.get(GET_MENU_URL)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data['success'] == True
+    assert 'menu' in data
+    assert 'count' in data
+    assert len(data['menu']) > 0
+
+@pytest.mark.skipif(not GET_MENU_URL, reason="Function URL not set")
+def test_get_menu_by_category():
+    """Test filtering menu by category"""
+    response = requests.get(f"{GET_MENU_URL}?category=Buffet")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data['success'] == True
+    # All returned items should be in Buffet category
+    for item in data['menu']:
+        assert item['category'] == 'Buffet'
+
+@pytest.mark.skipif(not GET_MENU_URL, reason="Function URL not set")
+def test_get_menu_available_only():
+    """Test filtering for available items only"""
+    response = requests.get(f"{GET_MENU_URL}?available=true")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data['success'] == True
+    # All returned items should be available
+    for item in data['menu']:
+        assert item['available'] == True
