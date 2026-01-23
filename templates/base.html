@@ -17,7 +17,20 @@
                 <a href="/menu">Menu</a>
                 <a href="/cart">🛒 Cart<span class="cart-badge" id="cart-count">0</span></a>
                 <a href="/dashboard">Dashboard</a>
-                <a href="/logout">Logout</a>
+                
+                <!-- Admin Menu (only for admins) -->
+                {% if session.get('is_admin') %}
+                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle">⚙️ Admin</a>
+                    <div class="dropdown-menu">
+                        <a href="/admin">Dashboard</a>
+                        <a href="/admin/menu">Manage Menu</a>
+                        <a href="/admin/reviews">Manage Reviews</a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <a href="/logout">Logout ({{ session.get('user_name') }})</a>
             {% else %}
                 <a href="/login">Login</a>
                 <a href="/register">Register</a>

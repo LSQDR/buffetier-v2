@@ -3,9 +3,11 @@ load_dotenv()
 
 import os
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
-from database import neon_db, mongo_db
-from functools import wraps
+from database import neon_db, mongo_db 
 from datetime import datetime, timedelta
+from utils.auth import login_required, admin_required
+from database.neon_db import get_all_orders_admin, get_order_stats, update_order_status, delete_order_with_items
+from database.mongo_db import get_all_menu_items, create_menu_item, update_menu_item, delete_menu_item, get_all_reviews, delete_review
 
 # ============================================
 # APPLICATION SETUP
@@ -20,35 +22,13 @@ menu_cache = {
     'ttl': 300  # Cache for 5 minutes (300 seconds)
 }
 
-# ============================================
-# AUTHENTICATION DECORATOR
-# ============================================
-
-def login_required(f):
-    """
-    Decorator to require login for protected routes.
-    
-    Args:
-        f: The function to wrap
-        
-    Returns:
-        Wrapped function that checks for user session
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Please login to access this page', 'error')
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
 
 # ============================================
 # PUBLIC WEB ROUTES
 # ============================================
 
 @app.route('/')
-def home():
+def index():
     """Render home page."""
     return render_template('index.html')
 
@@ -87,7 +67,7 @@ def menu_page():
         return render_template('menu.html', items=items)
     except Exception as e:
         flash(f'Error loading menu: {str(e)}', 'error')
-        return redirect(url_for('home'))
+        return redirect(url_for('index'))
 
 
 
@@ -145,36 +125,29 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """
-    Handle user login.
-    
-    GET: Display login form
-    POST: Authenticate user and create session
-    
-    Returns:
-        Login template or redirect to dashboard
-    """
+    """Handle user login"""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         
-        if not email or not password:
-            flash('Email and password are required', 'error')
-            return render_template('login.html')
-        
-        # Authenticate user
+        # Use authenticate_user from neon_db
         user = neon_db.authenticate_user(email, password)
         
         if user:
+            # Set session variables
             session['user_id'] = user['user_id']
             session['user_name'] = user['name']
-            flash(f'Welcome back, {user["name"]}!', 'success')
-            return redirect(url_for('dashboard'))
+            session['is_admin'] = user.get('is_admin', False)  # Add admin status
+            
+            flash('Login successful!', 'success')
+            return redirect(url_for('index'))
         else:
-            flash('Invalid email or password', 'error')
-            return render_template('login.html')
+            flash('Invalid email or password', 'danger')
+            return redirect(url_for('login'))
     
+    # GET request - show login form
     return render_template('login.html')
+
 
 
 @app.route('/logout')
@@ -187,7 +160,7 @@ def logout():
     """
     session.clear()
     flash('You have been logged out', 'success')
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
 
 # ============================================
@@ -528,6 +501,108 @@ def api_clear_cart():
     session['cart'] = []
     session.modified = True
     return jsonify({'success': True}), 200
+
+
+# ============================================
+# ADMIN ROUTES
+# ============================================
+
+# Admin Dashboard
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """Admin dashboard showing all orders and stats"""
+    orders = get_all_orders_admin()
+    stats = get_order_stats()
+    return render_template('admin/dashboard.html', orders=orders, stats=stats)
+
+# Update Order Status
+@app.route('/admin/order/<int:order_id>/update', methods=['POST'])
+@admin_required
+def update_order_status_route(order_id):
+    """Update order status"""
+    new_status = request.form.get('status')
+    update_order_status(order_id, new_status)
+    flash(f'Order #{order_id} updated to {new_status}', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+# Delete Order
+@app.route('/admin/order/<int:order_id>/delete', methods=['POST'])
+@admin_required
+def delete_order_route(order_id):
+    """Delete an order and its items"""
+    delete_order_with_items(order_id)
+    flash(f'Order #{order_id} deleted', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+# Menu Management Page
+@app.route('/admin/menu')
+@admin_required
+def admin_menu():
+    """Admin menu management page"""
+    menu_items = get_all_menu_items()
+    return render_template('admin/menu.html', menu_items=menu_items)
+
+# Create Menu Item
+@app.route('/admin/menu/create', methods=['POST'])
+@admin_required
+def create_menu_item_route():
+    """Create new menu item"""
+    create_menu_item(
+        item_id=request.form.get('item_id'),
+        name=request.form.get('name'),
+        category=request.form.get('category'),
+        description=request.form.get('description'),
+        price=float(request.form.get('price')),
+        available=request.form.get('available') == 'on',
+        image_url=request.form.get('image_url', '')
+    )
+    flash(f'Menu item created', 'success')
+    return redirect(url_for('admin_menu'))
+
+# Update Menu Item
+@app.route('/admin/menu/<item_id>/update', methods=['POST'])
+@admin_required
+def update_menu_item_route(item_id):
+    """Update existing menu item"""
+    update_menu_item(
+        menu_id=item_id,
+        item_id=request.form.get('item_id'),
+        name=request.form.get('name'),
+        category=request.form.get('category'),
+        description=request.form.get('description'),
+        price=float(request.form.get('price')),
+        available=request.form.get('available') == 'on',
+        image_url=request.form.get('image_url', '')
+    )
+    flash('Menu item updated', 'success')
+    return redirect(url_for('admin_menu'))
+
+# Delete Menu Item
+@app.route('/admin/menu/<item_id>/delete', methods=['POST'])
+@admin_required
+def delete_menu_item_route(item_id):
+    """Delete menu item"""
+    delete_menu_item(item_id)
+    flash('Menu item deleted', 'success')
+    return redirect(url_for('admin_menu'))
+
+# Reviews Management (Bonus)
+@app.route('/admin/reviews')
+@admin_required
+def admin_reviews():
+    """Admin reviews management page"""
+    reviews = get_all_reviews()
+    return render_template('admin/reviews.html', reviews=reviews)
+
+# Delete Review
+@app.route('/admin/review/<review_id>/delete', methods=['POST'])
+@admin_required
+def delete_review_route(review_id):
+    """Delete a review"""
+    delete_review(review_id)
+    flash('Review deleted', 'success')
+    return redirect(url_for('admin_reviews'))
 
 
 # ============================================

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Admin Dashboard</h2>
+    
+    <!-- Order Stats -->
+    <div class="row mt-4">
+        {% for status, count in stats %}
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5>{{ status|title }}</h5>
+                    <h3>{{ count }}</h3>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Orders Table -->
+    <h3 class="mt-4">All Orders</h3>
+    <table class="table table-striped mt-3">
+        <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Table</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order[0] }}</td>
+                <td>{{ order[2] }}</td>
+                <td>{{ order[3] }}</td>
+                <td>£{{ "%.2f"|format(order[4]) }}</td>
+                <td>
+                    <span class="badge bg-{{ 'success' if order[5] == 'completed' else 'warning' }}">
+                        {{ order[5] }}
+                    </span>
+                </td>
+                <td>{{ order[6].strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                    <form method="POST" action="{{ url_for('update_order_status_route', order_id=order[0]) }}" style="display:inline;">
+                        <select name="status" onchange="this.form.submit()" class="form-select form-select-sm" style="width:auto;display:inline;">
+                            <option value="pending" {{ 'selected' if order[5] == 'pending' }}>Pending</option>
+                            <option value="preparing" {{ 'selected' if order[5] == 'preparing' }}>Preparing</option>
+                            <option value="ready" {{ 'selected' if order[5] == 'ready' }}>Ready</option>
+                            <option value="completed" {{ 'selected' if order[5] == 'completed' }}>Completed</option>
+                        </select>
+                    </form>
+                    <form method="POST" action="{{ url_for('delete_order_route', order_id=order[0]) }}" style="display:inline;" onsubmit="return confirm('Delete order #{{ order[0] }}?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

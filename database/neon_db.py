@@ -181,3 +181,72 @@ def get_user_by_id(user_id):
             return None
     finally:
         conn.close()
+
+def authenticate_user(email, password):
+    """Authenticate user by email and password"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            password_hash = hash_password(password)
+            cur.execute("""
+                SELECT user_id, email, name, phone, is_admin
+                FROM users
+                WHERE email = %s AND password_hash = %s
+            """, (email, password_hash))
+            user = cur.fetchone()
+            
+            if user:
+                return {
+                    'user_id': user[0],
+                    'email': user[1],
+                    'name': user[2],
+                    'phone': user[3],
+                    'is_admin': user[4] if len(user) > 4 else False  # Add admin status
+                }
+            return None
+    finally:
+        conn.close()
+
+
+def get_all_orders_admin():
+    """Get all orders for admin dashboard"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT o.order_id, o.user_id, u.name, o.table_number, 
+                       o.total_price, o.status, o.created_at
+                FROM orders o
+                JOIN users u ON o.user_id = u.user_id
+                ORDER BY o.created_at DESC
+            """)
+            orders = cur.fetchall()
+        return orders
+    finally:
+        conn.close()
+
+
+def get_order_stats():
+    """Get order statistics by status"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
+            stats = cur.fetchall()
+        return stats
+    finally:
+        conn.close()
+
+
+def delete_order_with_items(order_id):
+    """Delete an order and its items"""
+    conn = get_neon_connection()
+    try:
+        with conn.cursor() as cur:
+            # Delete order_items first (foreign key constraint)
+            cur.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
+            # Then delete order
+            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
+            conn.commit()
+    finally:
+        conn.close()

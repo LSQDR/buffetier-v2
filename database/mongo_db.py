@@ -1,7 +1,3 @@
-"""
-MongoDB Database Module
-Handles all interactions with MongoDB for menu items and reviews.
-"""
 
 import os
 from pymongo import MongoClient
@@ -23,9 +19,9 @@ def get_mongo_connection():
     
     client = MongoClient(
         mongo_uri,
-        serverSelectionTimeoutMS=5000,  # 5 second timeout
-        connectTimeoutMS=5000,
-        socketTimeoutMS=5000
+        serverSelectionTimeoutMS=30000,  # 30 second timeout
+        connectTimeoutMS=30000,
+        socketTimeoutMS=30000
     )
     return client['buffetier']
 
@@ -137,3 +133,86 @@ def delete_review(review_id):
     """
     db = get_mongo_connection()
     db.reviews.delete_one({"_id": ObjectId(review_id)})
+
+def create_menu_item(item_id, name, category, description, price, available=True, image_url=''):
+    """
+    Create a new menu item.
+    
+    Args:
+        item_id (str): Unique item ID (e.g., 'BUFF001')
+        name (str): Item name
+        category (str): Category name
+        description (str): Item description
+        price (float): Item price
+        available (bool): Whether item is available
+        image_url (str): Image URL
+        
+    Returns:
+        str: Inserted item ID
+    """
+    db = get_mongo_connection()
+    
+    new_item = {
+        'item_id': item_id,
+        'name': name,
+        'category': category,
+        'description': description,
+        'price': price,
+        'available': available,
+        'image_url': image_url
+    }
+    
+    result = db.menu.insert_one(new_item)
+    return str(result.inserted_id)
+
+
+def update_menu_item(menu_id, item_id, name, category, description, price, available, image_url=''):
+    """
+    Update an existing menu item.
+    
+    Args:
+        menu_id (str): MongoDB _id of the item
+        item_id (str): Item ID
+        name (str): Item name
+        category (str): Category name
+        description (str): Item description
+        price (float): Item price
+        available (bool): Whether item is available
+        image_url (str): Image URL
+        
+    Returns:
+        bool: True if successful
+    """
+    db = get_mongo_connection()
+    
+    updated_item = {
+        'item_id': item_id,
+        'name': name,
+        'category': category,
+        'description': description,
+        'price': price,
+        'available': available,
+        'image_url': image_url
+    }
+    
+    result = db.menu.update_one(
+        {'_id': ObjectId(menu_id)}, 
+        {'$set': updated_item}
+    )
+    return result.modified_count > 0 or result.matched_count > 0
+
+
+
+def delete_menu_item(menu_id):
+    """
+    Delete a menu item.
+    
+    Args:
+        menu_id (str): MongoDB _id of the item to delete
+        
+    Returns:
+        bool: True if successful
+    """
+    db = get_mongo_connection()
+    result = db.menu.delete_one({'_id': ObjectId(menu_id)})
+    return result.deleted_count > 0
