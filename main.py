@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from utils.auth import login_required, admin_required
 from database.neon_db import get_all_orders_admin, get_order_stats, update_order_status, delete_order_with_items
 from database.mongo_db import get_all_menu_items, create_menu_item, update_menu_item, delete_menu_item, get_all_reviews, delete_review
+from utils.cloud_storage import upload_menu_image, delete_menu_image
+from utils.secrets import get_secret
+
 
 # ============================================
 # APPLICATION SETUP
@@ -603,6 +606,60 @@ def delete_review_route(review_id):
     delete_review(review_id)
     flash('Review deleted', 'success')
     return redirect(url_for('admin_reviews'))
+
+    
+
+# ============================================
+# CLOUD STORAGE API ROUTES
+# ============================================
+
+@app.route('/api/upload-image', methods=['POST'])
+@admin_required
+def upload_image():
+    """Upload menu item image to Cloud Storage"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+        
+        file = request.files['image']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Upload to Cloud Storage
+        image_url = upload_menu_image(file)
+        
+        return jsonify({
+            'success': True,
+            'url': image_url
+        }), 200
+        
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
+
+@app.route('/api/delete-image', methods=['POST'])
+@admin_required
+def delete_image():
+    """Delete image from Cloud Storage"""
+    try:
+        data = request.get_json()
+        image_url = data.get('image_url')
+        
+        if not image_url:
+            return jsonify({'error': 'No image URL provided'}), 400
+        
+        success = delete_menu_image(image_url)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'error': 'Failed to delete image'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # ============================================
