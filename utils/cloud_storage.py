@@ -34,19 +34,27 @@ def upload_menu_image(file):
         raise ValueError('Invalid file type. Use PNG, JPG, JPEG, or WebP')
     
     try:
+        # Read file into memory first
+        file_content = file.read()
+        file_stream = io.BytesIO(file_content)
+        
         # Open and optimize image
-        img = Image.open(file)
+        img = Image.open(file_stream)
         
         # Convert RGBA/LA to RGB
         if img.mode in ('RGBA', 'LA', 'P'):
             background = Image.new('RGB', img.size, (255, 255, 255))
             if img.mode == 'P':
                 img = img.convert('RGBA')
-            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
-            img = background
+            if img.mode in ('RGBA', 'LA'):
+                background.paste(img, mask=img.split()[-1])
+                img = background
+            else:
+                img = img.convert('RGB')
         
         # Resize if too large
-        img.thumbnail(MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
+        if img.width > MAX_IMAGE_SIZE[0] or img.height > MAX_IMAGE_SIZE[1]:
+            img.thumbnail(MAX_IMAGE_SIZE, Image.Resampling.LANCZOS)
         
         # Save to bytes buffer
         buffer = io.BytesIO()
@@ -57,13 +65,14 @@ def upload_menu_image(file):
         client = storage.Client()
         bucket = client.bucket(BUCKET_NAME)
         
-        # Generate unique blob name
+        # Generate unique blob name with timestamp
         from datetime import datetime
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        blob_name = f"menu-items/{timestamp}_{filename}"
+        base_name = filename.rsplit('.', 1)[0]
+        blob_name = f"menu-items/{timestamp}_{base_name}.jpg"
         blob = bucket.blob(blob_name)
         
-        # Upload with caching headers
+        # Upload with proper content type and caching
         blob.upload_from_file(
             buffer,
             content_type='image/jpeg',
@@ -76,6 +85,10 @@ def upload_menu_image(file):
         return blob.public_url
         
     except Exception as e:
+        # More detailed error for debugging
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Upload error details: {error_details}")
         raise Exception(f"Upload failed: {str(e)}")
 
 
@@ -94,14 +107,24 @@ def delete_menu_image(image_url):
     
     try:
         # Extract blob name from URL
-        blob_name = image_url.split(f'{BUCKET_NAME}/')[-1]
+        # URL format: https://storage.googleapis.com/bucket-name/blob-name
+        parts = image_url.split(f'{BUCKET_NAME}/')
+        if len(parts) < 2:
+            return False
+        
+        blob_name = parts[-1]
         
         client = storage.Client()
         bucket = client.bucket(BUCKET_NAME)
         blob = bucket.blob(blob_name)
         
-        blob.delete()
-        return True
+        # Check if blob exists before deleting
+        if blob.exists():
+            blob.delete()
+            return True
+        else:
+            print(f"Blob does not exist: {blob_name}")
+            return False
         
     except Exception as e:
         print(f"Delete error: {e}")

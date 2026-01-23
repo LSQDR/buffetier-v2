@@ -1,252 +1,231 @@
-import os
+"""
+PostgreSQL (Neon) database operations for users and orders.
+Uses Secret Manager for secure credential storage.
+"""
+
 import psycopg2
+from psycopg2.extras import RealDictCursor
+import os
 import hashlib
 
-
 def get_neon_connection():
-    """Get connection to Neon Postgres"""
-    return psycopg2.connect(
-        os.environ.get('NEON_DB_URL'),
-        sslmode='require'
-    )
-
-def get_user_by_email(email):
-    """Fetch user by email"""
-    conn = get_neon_connection()
+    """
+    Get Neon PostgreSQL connection with credentials from Secret Manager.
+    Falls back to environment variable if Secret Manager unavailable.
+    """
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-            user = cur.fetchone()
-        return user
-    finally:
-        conn.close()
-
-def create_user(email, name, phone):
-    """Create a new user"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO users (email, name, phone)
-                VALUES (%s, %s, %s)
-                RETURNING user_id
-            """, (email, name, phone))
-            user_id = cur.fetchone()[0]
-            conn.commit()
-            return user_id
-    finally:
-        conn.close()
-
-def delete_user(user_id):
-    """Delete a user"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
-            conn.commit()
-    finally:
-        conn.close()
-
-def create_order(user_id, table_number, total_price, order_items):
-    """Create a new order"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO orders (user_id, table_number, total_price, status)
-                VALUES (%s, %s, %s, 'pending')
-                RETURNING order_id
-            """, (user_id, table_number, total_price))
-            order_id = cur.fetchone()[0]
-            
-            for item in order_items:
-                cur.execute("""
-                    INSERT INTO order_items (order_id, menu_item_id, item_name, quantity, price)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (order_id, item['item_id'], item['name'], item['quantity'], item['price']))
-            
-            conn.commit()
-            return order_id
-    finally:
-        conn.close()
-
-def get_all_orders(user_id):
-    """Get all orders for a user"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT o.order_id, o.total_price, o.status, o.created_at
-                FROM orders o
-                WHERE o.user_id = %s
-                ORDER BY o.created_at DESC
-            """, (user_id,))
-            orders = cur.fetchall()
-        return orders
-    finally:
-        conn.close()
-
-def delete_order(order_id):
-    """Delete an order"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
-            conn.commit()
-    finally:
-        conn.close()
-
-def update_order_status(order_id, status):
-    """Update order status"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE orders SET status = %s WHERE order_id = %s",
-                (status, order_id)
-            )
-            conn.commit()
-            return True
-    finally:
-        conn.close()
-
-def hash_password(password):
-    """Hash a password using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def register_user(email, name, phone, password):
-    """Register a new user with password"""
-    conn = get_neon_connection()
-    try:
-        with conn.cursor() as cur:
-            password_hash = hash_password(password)
-            cur.execute("""
-                INSERT INTO users (email, name, phone, password_hash)
-                VALUES (%s, %s, %s, %s)
-                RETURNING user_id
-            """, (email, name, phone, password_hash))
-            user_id = cur.fetchone()[0]
-            conn.commit()
-            return user_id
+        from utils.secrets import get_secret
+        db_url = get_secret('neon-db-uri')
+        print("✓ Using Neon URI from Secret Manager")
     except Exception as e:
-        conn.rollback()
-        return None
-    finally:
+        print(f"⚠ Secret Manager unavailable: {e}")
+        print("  Falling back to environment variable")
+        db_url = os.getenv('DATABASE_URL')
+        if not db_url:
+            raise Exception("Neon URI not found in Secret Manager or environment variables")
+    
+    return psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+
+
+# ============================================
+# USER OPERATIONS
+# ============================================
+
+def register_user(name, email, password, is_admin=False):
+    """Register a new user"""
+    try:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        cur.execute("""
+            INSERT INTO users (name, email, password, is_admin)
+            VALUES (%s, %s, %s, %s)
+            RETURNING user_id
+        """, (name, email, hashed_password, is_admin))
+        
+        user_id = cur.fetchone()['user_id']
+        conn.commit()
+        cur.close()
         conn.close()
+        
+        return user_id
+        
+    except psycopg2.IntegrityError:
+        return None  # Email already exists
+    except Exception as e:
+        print(f"Error registering user: {e}")
+        return None
+
 
 def authenticate_user(email, password):
-    """Authenticate user by email and password"""
-    conn = get_neon_connection()
+    """Authenticate user login"""
     try:
-        with conn.cursor() as cur:
-            password_hash = hash_password(password)
-            cur.execute("""
-                SELECT user_id, email, name, phone
-                FROM users
-                WHERE email = %s AND password_hash = %s
-            """, (email, password_hash))
-            user = cur.fetchone()
-            
-            if user:
-                return {
-                    'user_id': user[0],
-                    'email': user[1],
-                    'name': user[2],
-                    'phone': user[3]
-                }
-            return None
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        cur.execute("""
+            SELECT user_id, name, email, is_admin
+            FROM users
+            WHERE email = %s AND password = %s
+        """, (email, hashed_password))
+        
+        user = cur.fetchone()
+        cur.close()
         conn.close()
+        
+        return dict(user) if user else None
+        
+    except Exception as e:
+        print(f"Error authenticating user: {e}")
+        return None
+
 
 def get_user_by_id(user_id):
-    """Get user details by ID"""
-    conn = get_neon_connection()
+    """Get user by ID"""
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT user_id, email, name, phone, created_at
-                FROM users
-                WHERE user_id = %s
-            """, (user_id,))
-            user = cur.fetchone()
-            
-            if user:
-                return {
-                    'user_id': user[0],
-                    'email': user[1],
-                    'name': user[2],
-                    'phone': user[3],
-                    'created_at': str(user[4])
-                }
-            return None
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT user_id, name, email, is_admin
+            FROM users
+            WHERE user_id = %s
+        """, (user_id,))
+        
+        user = cur.fetchone()
+        cur.close()
         conn.close()
+        
+        return dict(user) if user else None
+        
+    except Exception as e:
+        print(f"Error fetching user: {e}")
+        return None
 
-def authenticate_user(email, password):
-    """Authenticate user by email and password"""
-    conn = get_neon_connection()
+
+# ============================================
+# ORDER OPERATIONS
+# ============================================
+
+def create_order(user_id, items, total_amount):
+    """Create a new order"""
     try:
-        with conn.cursor() as cur:
-            password_hash = hash_password(password)
-            cur.execute("""
-                SELECT user_id, email, name, phone, is_admin
-                FROM users
-                WHERE email = %s AND password_hash = %s
-            """, (email, password_hash))
-            user = cur.fetchone()
-            
-            if user:
-                return {
-                    'user_id': user[0],
-                    'email': user[1],
-                    'name': user[2],
-                    'phone': user[3],
-                    'is_admin': user[4] if len(user) > 4 else False  # Add admin status
-                }
-            return None
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            INSERT INTO orders (user_id, items, total_amount, status)
+            VALUES (%s, %s, %s, 'pending')
+            RETURNING order_id
+        """, (user_id, items, total_amount))
+        
+        order_id = cur.fetchone()['order_id']
+        conn.commit()
+        cur.close()
         conn.close()
+        
+        return order_id
+        
+    except Exception as e:
+        print(f"Error creating order: {e}")
+        return None
 
 
-def get_all_orders_admin():
-    """Get all orders for admin dashboard"""
-    conn = get_neon_connection()
+def get_user_orders(user_id):
+    """Get all orders for a user"""
     try:
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT o.order_id, o.user_id, u.name, o.table_number, 
-                       o.total_price, o.status, o.created_at
-                FROM orders o
-                JOIN users u ON o.user_id = u.user_id
-                ORDER BY o.created_at DESC
-            """)
-            orders = cur.fetchall()
-        return orders
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT order_id, items, total_amount, status, order_date
+            FROM orders
+            WHERE user_id = %s
+            ORDER BY order_date DESC
+        """, (user_id,))
+        
+        orders = cur.fetchall()
+        cur.close()
         conn.close()
+        
+        return [dict(order) for order in orders]
+        
+    except Exception as e:
+        print(f"Error fetching user orders: {e}")
+        return []
 
 
-def get_order_stats():
-    """Get order statistics by status"""
-    conn = get_neon_connection()
+def get_all_orders():
+    """Get all orders (admin)"""
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT status, COUNT(*) FROM orders GROUP BY status")
-            stats = cur.fetchall()
-        return stats
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT o.order_id, o.user_id, u.name as user_name, u.email,
+                   o.items, o.total_amount, o.status, o.order_date
+            FROM orders o
+            JOIN users u ON o.user_id = u.user_id
+            ORDER BY o.order_date DESC
+        """)
+        
+        orders = cur.fetchall()
+        cur.close()
         conn.close()
+        
+        return [dict(order) for order in orders]
+        
+    except Exception as e:
+        print(f"Error fetching all orders: {e}")
+        return []
 
 
-def delete_order_with_items(order_id):
-    """Delete an order and its items"""
-    conn = get_neon_connection()
+def update_order_status(order_id, new_status):
+    """Update order status"""
     try:
-        with conn.cursor() as cur:
-            # Delete order_items first (foreign key constraint)
-            cur.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
-            # Then delete order
-            cur.execute("DELETE FROM orders WHERE order_id = %s", (order_id,))
-            conn.commit()
-    finally:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            UPDATE orders
+            SET status = %s
+            WHERE order_id = %s
+        """, (new_status, order_id))
+        
+        conn.commit()
+        affected_rows = cur.rowcount
+        cur.close()
         conn.close()
+        
+        return affected_rows > 0
+        
+    except Exception as e:
+        print(f"Error updating order status: {e}")
+        return False
+
+
+def get_order_by_id(order_id):
+    """Get order by ID"""
+    try:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT order_id, user_id, items, total_amount, status, order_date
+            FROM orders
+            WHERE order_id = %s
+        """, (order_id,))
+        
+        order = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        return dict(order) if order else None
+        
+    except Exception as e:
+        print(f"Error fetching order: {e}")
+        return None

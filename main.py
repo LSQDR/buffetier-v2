@@ -607,7 +607,7 @@ def delete_review_route(review_id):
     flash('Review deleted', 'success')
     return redirect(url_for('admin_reviews'))
 
-    
+
 
 # ============================================
 # CLOUD STORAGE API ROUTES
@@ -678,6 +678,41 @@ def server_error(e):
     return "Internal server error", 500
 
 
+@app.route('/api/upload-test', methods=['POST'])
+@admin_required
+def upload_test():
+    """Debug upload to see exact error"""
+    try:
+        print("=== UPLOAD DEBUG ===")
+        print(f"Files in request: {request.files}")
+        
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image in request'}), 400
+        
+        file = request.files['image']
+        print(f"File object: {file}")
+        print(f"Filename: {file.filename}")
+        print(f"Content type: {file.content_type}")
+        
+        # Try to read file
+        content = file.read()
+        print(f"File size: {len(content)} bytes")
+        
+        # Reset file pointer
+        file.seek(0)
+        
+        # Now try upload
+        from utils.cloud_storage import upload_menu_image
+        url = upload_menu_image(file)
+        
+        return jsonify({'success': True, 'url': url}), 200
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"ERROR: {error_trace}")
+        return jsonify({'error': str(e), 'trace': error_trace}), 500
+        
 # ============================================
 # APPLICATION ENTRY POINT
 # ============================================
