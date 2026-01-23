@@ -6,7 +6,7 @@
 {% block content %}
 <div class="card">
     <h1>Welcome, {{ user.name }}!</h1>
-    <p style="color: #777;">Email: {{ user.email }} | Phone: {{ user.phone }}</p>
+    <p style="color: #777;">Email: {{ user.email }} | Phone: {{ user.phone or 'Not provided' }}</p>
 </div>
 
 <div class="card">
@@ -25,10 +25,14 @@
         <tbody>
             {% for order in orders %}
             <tr>
-                <td>#{{ order[0] }}</td>
-                <td>£{{ "%.2f"|format(order[1]) }}</td>
-                <td><span class="status {{ order[2] }}">{{ order[2] }}</span></td>
-                <td>{{ order[3] }}</td>
+                <td>#{{ order.order_id }}</td>
+                <td>£{{ "%.2f"|format(order.total_amount) }}</td>
+                <td>
+                    <span class="status {{ order.status }}">
+                        {{ order.status|title }}
+                    </span>
+                </td>
+                <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}</td>
             </tr>
             {% endfor %}
         </tbody>

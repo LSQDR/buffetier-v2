@@ -6,10 +6,33 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 from database import neon_db, mongo_db 
 from datetime import datetime, timedelta
 from utils.auth import login_required, admin_required
-from database.neon_db import get_all_orders_admin, get_order_stats, update_order_status, delete_order_with_items
-from database.mongo_db import get_all_menu_items, create_menu_item, update_menu_item, delete_menu_item, get_all_reviews, delete_review
 from utils.cloud_storage import upload_menu_image, delete_menu_image
 from utils.secrets import get_secret
+from utils.email import send_order_confirmation, send_order_status_update
+
+from database.neon_db import (
+    register_user,
+    authenticate_user,
+    get_user_by_id,
+    get_user_by_email,  
+    create_order,
+    get_user_orders,
+    get_all_orders,
+    update_order_status,
+    get_order_by_id,
+    get_all_orders_admin,  
+    get_order_stats,       
+    delete_order_with_items
+)
+
+from database.mongo_db import (
+    get_all_menu_items, 
+    create_menu_item,
+    update_menu_item,
+    delete_menu_item,
+    get_all_reviews,
+    delete_review
+)
 
 
 # ============================================
@@ -173,17 +196,15 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """
-    Display user dashboard with order history.
-    
-    Returns:
-        Dashboard template with user info and orders
-    """
+    """User dashboard showing their orders"""
     user_id = session.get('user_id')
-    user = neon_db.get_user_by_id(user_id)
-    orders = neon_db.get_all_orders(user_id)
-    
+    # Get user details
+    user = get_user_by_id(user_id)
+    # Get user's orders
+    orders = get_user_orders(user_id)
+    # Pass BOTH user and orders to template
     return render_template('dashboard.html', user=user, orders=orders)
+
 
 
 @app.route('/cart')
@@ -203,49 +224,81 @@ def cart():
 @app.route('/checkout', methods=['POST'])
 @login_required
 def checkout():
-    """
-    Process checkout and create order.
-    
-    Validates cart, creates order in database, and clears cart.
-    
-    Returns:
-        Redirect to dashboard with success message or cart with error
-    """
-    cart_items = session.get('cart', [])
-    
-    if not cart_items:
-        flash('Your cart is empty', 'error')
-        return redirect(url_for('menu_page'))
-    
-    # Calculate total price
-    total_price = sum(item['price'] * item['quantity'] for item in cart_items)
-    
-    # Prepare items for database
-    items = []
-    for item in cart_items:
-        items.append({
-            'item_id': item['item_id'],
-            'name': item['name'],
-            'price': item['price'],
-            'quantity': item['quantity']
-        })
-    
-    # Create order in database
+    """Process checkout and create order"""
     try:
         user_id = session.get('user_id')
-        table_number = 0  # Can be updated later with table selection
-        order_id = neon_db.create_order(user_id, table_number, total_price, items)
         
-        # Clear cart after successful order
-        session['cart'] = []
-        session.modified = True
+        # Get cart from session (it's a LIST, not a dict)
+        cart = session.get('cart', [])
         
-        flash(f'Order #{order_id} placed successfully! Total: £{total_price:.2f}', 'success')
-        return redirect(url_for('dashboard'))
+        if not cart or len(cart) == 0:
+            flash('Your cart is empty', 'error')
+            return redirect('/cart')
         
+        # Calculate total and prepare items
+        total = 0
+        items = []
+        
+        # Cart is a list, so iterate directly
+        for item in cart:
+            item_total = item['price'] * item['quantity']
+            total += item_total
+            items.append({
+                'item_id': item['item_id'],
+                'name': item['name'],
+                'quantity': item['quantity'],
+                'price': item['price']
+            })
+        
+        # Create order in database
+        import json
+        order_id = create_order(user_id, json.dumps(items), total)
+        
+        if order_id:
+            # Clear cart
+            session['cart'] = []
+            session.modified = True
+            
+            # Send confirmation email
+            try:
+                from utils.email import send_order_confirmation
+                
+                user = get_user_by_id(user_id)
+                if user:
+                    email_sent = send_order_confirmation(
+                        to_email=user['email'],
+                        user_name=user['name'],
+                        order_details={
+                            'order_id': order_id,
+                            'total_amount': total,
+                            'items': items,
+                            'status': 'pending'
+                        }
+                    )
+                    
+                    if email_sent:
+                        flash(f'Order #{order_id} placed successfully! Check your email for confirmation.', 'success')
+                    else:
+                        flash(f'Order #{order_id} placed successfully!', 'success')
+                else:
+                    flash(f'Order #{order_id} placed successfully!', 'success')
+                    
+            except Exception as email_error:
+                print(f"Confirmation email failed: {email_error}")
+                flash(f'Order #{order_id} placed successfully!', 'success')
+            
+            return redirect('/dashboard')
+        else:
+            flash('Failed to create order', 'error')
+            return redirect('/cart')
+            
     except Exception as e:
-        flash(f'Error placing order: {str(e)}', 'error')
-        return redirect(url_for('cart'))
+        import traceback
+        print(f"Checkout error: {e}")
+        print(traceback.format_exc())
+        flash(f'Checkout failed: {str(e)}', 'error')
+        return redirect('/cart')
+
 
 
 # ============================================
@@ -523,11 +576,50 @@ def admin_dashboard():
 @app.route('/admin/order/<int:order_id>/update', methods=['POST'])
 @admin_required
 def update_order_status_route(order_id):
-    """Update order status"""
-    new_status = request.form.get('status')
-    update_order_status(order_id, new_status)
-    flash(f'Order #{order_id} updated to {new_status}', 'success')
-    return redirect(url_for('admin_dashboard'))
+    """Update order status and send email notification"""
+    try:
+        new_status = request.form.get('status')
+        
+        # Update status in database
+        if update_order_status(order_id, new_status):
+            # Send email notification
+            try:
+                from utils.email import send_order_status_update
+                
+                # Get order and user details
+                order = get_order_by_id(order_id)
+                if order:
+                    user = get_user_by_id(order['user_id'])
+                    if user:
+                        # Send status update email
+                        email_sent = send_order_status_update(
+                            to_email=user['email'],
+                            user_name=user['name'],
+                            order_id=order_id,
+                            new_status=new_status
+                        )
+                        
+                        if email_sent:
+                            flash(f'Order #{order_id} updated to {new_status} and email sent', 'success')
+                        else:
+                            flash(f'Order #{order_id} updated to {new_status} (email failed)', 'warning')
+                    else:
+                        flash(f'Order #{order_id} updated to {new_status} (user not found)', 'warning')
+                else:
+                    flash(f'Order #{order_id} updated to {new_status} (order not found)', 'warning')
+                    
+            except Exception as email_error:
+                # Don't fail if email fails - order is already updated
+                print(f"Email notification failed: {email_error}")
+                flash(f'Order #{order_id} updated to {new_status} (email notification failed)', 'warning')
+        else:
+            flash(f'Failed to update order #{order_id}', 'error')
+            
+        return redirect(url_for('admin_dashboard'))
+        
+    except Exception as e:
+        flash(f'Error updating order: {str(e)}', 'error')
+        return redirect(url_for('admin_dashboard'))
 
 # Delete Order
 @app.route('/admin/order/<int:order_id>/delete', methods=['POST'])
@@ -544,6 +636,9 @@ def delete_order_route(order_id):
 def admin_menu():
     """Admin menu management page"""
     menu_items = get_all_menu_items()
+    print(f"DEBUG: Found {len(menu_items)} menu items")  # Debug line
+    for item in menu_items[:3]:  # Print first 3
+        print(f"  - {item}")
     return render_template('admin/menu.html', menu_items=menu_items)
 
 # Create Menu Item
@@ -606,7 +701,6 @@ def delete_review_route(review_id):
     delete_review(review_id)
     flash('Review deleted', 'success')
     return redirect(url_for('admin_reviews'))
-
 
 
 # ============================================

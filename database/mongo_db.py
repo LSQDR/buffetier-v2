@@ -1,17 +1,9 @@
-"""
-MongoDB database operations for menu items and reviews.
-Uses Secret Manager for secure credential storage.
-"""
-
 from pymongo import MongoClient
 from bson import ObjectId
 import os
 
 def get_mongo_client():
-    """
-    Get MongoDB client with credentials from Secret Manager.
-    Falls back to environment variable if Secret Manager unavailable.
-    """
+    """Get MongoDB client with credentials from Secret Manager"""
     try:
         from utils.secrets import get_secret
         mongo_uri = get_secret('mongodb-uri')
@@ -21,16 +13,15 @@ def get_mongo_client():
         print("  Falling back to environment variable")
         mongo_uri = os.getenv('MONGO_URI')
         if not mongo_uri:
-            raise Exception("MongoDB URI not found in Secret Manager or environment variables")
+            raise Exception("MongoDB URI not found")
     
     return MongoClient(mongo_uri)
 
-
-# Initialize database connection
+# Initialize
 try:
     client = get_mongo_client()
     db = client['buffetier']
-    menu_collection = db['menu_items']
+    menu_collection = db['menu']
     reviews_collection = db['reviews']
     print("✓ MongoDB connected successfully")
 except Exception as e:
@@ -46,6 +37,7 @@ def get_all_menu_items():
     """Retrieve all menu items from MongoDB"""
     try:
         items = list(menu_collection.find())
+        print(f"✓ Retrieved {len(items)} menu items from MongoDB")
         return items
     except Exception as e:
         print(f"Error fetching menu items: {e}")
@@ -61,23 +53,45 @@ def get_menu_item_by_id(item_id):
         return None
 
 
-def create_menu_item(item_data):
+def create_menu_item(item_id, name, category, description, price, available=True, image_url=''):
     """Create a new menu item"""
     try:
+        item_data = {
+            'item_id': item_id,
+            'name': name,
+            'category': category,
+            'description': description,
+            'price': float(price),
+            'available': available,
+            'image_url': image_url
+        }
+        
         result = menu_collection.insert_one(item_data)
+        print(f"✓ Created menu item: {name}")
         return str(result.inserted_id)
     except Exception as e:
         print(f"Error creating menu item: {e}")
         return None
 
 
-def update_menu_item(item_id, updated_data):
+def update_menu_item(menu_id, item_id, name, category, description, price, available=True, image_url=''):
     """Update an existing menu item"""
     try:
+        updated_data = {
+            'item_id': item_id,
+            'name': name,
+            'category': category,
+            'description': description,
+            'price': float(price),
+            'available': available,
+            'image_url': image_url
+        }
+        
         result = menu_collection.update_one(
-            {'_id': ObjectId(item_id)},
+            {'_id': ObjectId(menu_id)},
             {'$set': updated_data}
         )
+        print(f"✓ Updated menu item: {name}")
         return result.modified_count > 0
     except Exception as e:
         print(f"Error updating menu item: {e}")
@@ -88,6 +102,7 @@ def delete_menu_item(item_id):
     """Delete a menu item by ID"""
     try:
         result = menu_collection.delete_one({'_id': ObjectId(item_id)})
+        print(f"✓ Deleted menu item: {item_id}")
         return result.deleted_count > 0
     except Exception as e:
         print(f"Error deleting menu item: {e}")

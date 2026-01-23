@@ -31,7 +31,7 @@ def get_neon_connection():
 # USER OPERATIONS
 # ============================================
 
-def register_user(name, email, password, is_admin=False):
+def register_user(name, email, password, phone='', is_admin=False):
     """Register a new user"""
     try:
         conn = get_neon_connection()
@@ -40,10 +40,10 @@ def register_user(name, email, password, is_admin=False):
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         
         cur.execute("""
-            INSERT INTO users (name, email, password, is_admin)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO users (name, email, phone, password_hash, is_admin)
+            VALUES (%s, %s, %s, %s, %s)
             RETURNING user_id
-        """, (name, email, hashed_password, is_admin))
+        """, (name, email, phone, hashed_password, is_admin))
         
         user_id = cur.fetchone()['user_id']
         conn.commit()
@@ -68,9 +68,9 @@ def authenticate_user(email, password):
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         
         cur.execute("""
-            SELECT user_id, name, email, is_admin
+            SELECT user_id, name, email, phone, is_admin
             FROM users
-            WHERE email = %s AND password = %s
+            WHERE email = %s AND password_hash = %s
         """, (email, hashed_password))
         
         user = cur.fetchone()
@@ -91,7 +91,7 @@ def get_user_by_id(user_id):
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT user_id, name, email, is_admin
+            SELECT user_id, name, email, phone, is_admin, created_at
             FROM users
             WHERE user_id = %s
         """, (user_id,))
@@ -107,32 +107,82 @@ def get_user_by_id(user_id):
         return None
 
 
-# ============================================
-# ORDER OPERATIONS
-# ============================================
-
-def create_order(user_id, items, total_amount):
-    """Create a new order"""
+def get_user_by_email(email):
+    """Get user by email address"""
     try:
         conn = get_neon_connection()
         cur = conn.cursor()
         
         cur.execute("""
-            INSERT INTO orders (user_id, items, total_amount, status)
+            SELECT user_id, name, email, phone, is_admin, created_at
+            FROM users
+            WHERE email = %s
+        """, (email,))
+        
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        
+        return dict(user) if user else None
+        
+    except Exception as e:
+        print(f"Error fetching user by email: {e}")
+        return None
+
+
+# ============================================
+# ORDER OPERATIONS
+# ============================================
+
+def create_order(user_id, items, total_amount, table_number=None):
+    """Create a new order with items in separate table"""
+    conn = None
+    try:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        # Insert order (use total_price not total_amount)
+        cur.execute("""
+            INSERT INTO orders (user_id, table_number, total_price, status)
             VALUES (%s, %s, %s, 'pending')
             RETURNING order_id
-        """, (user_id, items, total_amount))
+        """, (user_id, table_number, total_amount))
         
         order_id = cur.fetchone()['order_id']
+        
+        # Parse items JSON
+        import json
+        items_list = json.loads(items) if isinstance(items, str) else items
+        
+        # Insert each item into order_items table
+        for item in items_list:
+            cur.execute("""
+                INSERT INTO order_items (order_id, menu_item_id, item_name, quantity, price)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                order_id,
+                item.get('item_id', 'N/A'),
+                item['name'],
+                item['quantity'],
+                item['price']
+            ))
+        
         conn.commit()
         cur.close()
         conn.close()
         
+        print(f"✓ Order {order_id} created with {len(items_list)} items")
         return order_id
         
     except Exception as e:
-        print(f"Error creating order: {e}")
+        print(f"✗ Error creating order: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.rollback()
+            conn.close()
         return None
+
 
 
 def get_user_orders(user_id):
@@ -142,10 +192,12 @@ def get_user_orders(user_id):
         cur = conn.cursor()
         
         cur.execute("""
-            SELECT order_id, items, total_amount, status, order_date
+            SELECT order_id, user_id, table_number, 
+                   total_price as total_amount, status, 
+                   created_at as order_date
             FROM orders
             WHERE user_id = %s
-            ORDER BY order_date DESC
+            ORDER BY created_at DESC
         """, (user_id,))
         
         orders = cur.fetchall()
@@ -160,17 +212,19 @@ def get_user_orders(user_id):
 
 
 def get_all_orders():
-    """Get all orders (admin)"""
+    """Get all orders with items (admin)"""
     try:
         conn = get_neon_connection()
         cur = conn.cursor()
         
+        # Get orders with user info
         cur.execute("""
             SELECT o.order_id, o.user_id, u.name as user_name, u.email,
-                   o.items, o.total_amount, o.status, o.order_date
+                   o.table_number, o.total_price as total_amount, 
+                   o.status, o.created_at as order_date
             FROM orders o
             JOIN users u ON o.user_id = u.user_id
-            ORDER BY o.order_date DESC
+            ORDER BY o.created_at DESC
         """)
         
         orders = cur.fetchall()
@@ -182,6 +236,7 @@ def get_all_orders():
     except Exception as e:
         print(f"Error fetching all orders: {e}")
         return []
+
 
 
 def update_order_status(order_id, new_status):
@@ -209,23 +264,125 @@ def update_order_status(order_id, new_status):
 
 
 def get_order_by_id(order_id):
-    """Get order by ID"""
+    """Get order by ID with items"""
     try:
         conn = get_neon_connection()
         cur = conn.cursor()
         
+        # Get order
         cur.execute("""
-            SELECT order_id, user_id, items, total_amount, status, order_date
+            SELECT order_id, user_id, table_number,
+                   total_price as total_amount, status, 
+                   created_at as order_date
             FROM orders
             WHERE order_id = %s
         """, (order_id,))
         
         order = cur.fetchone()
+        
+        if order:
+            order_dict = dict(order)
+            
+            # Get order items
+            cur.execute("""
+                SELECT menu_item_id, item_name, quantity, price
+                FROM order_items
+                WHERE order_id = %s
+            """, (order_id,))
+            
+            items = cur.fetchall()
+            order_dict['items'] = [dict(item) for item in items]
+        else:
+            order_dict = None
+        
         cur.close()
         conn.close()
         
-        return dict(order) if order else None
+        return order_dict
         
     except Exception as e:
         print(f"Error fetching order: {e}")
         return None
+
+# Add these to the bottom of neon_db.py
+
+def get_all_orders_admin():
+    """Get all orders with stats (alias for get_all_orders)"""
+    return get_all_orders()
+
+
+def get_order_stats():
+    """Get order statistics by status"""
+    try:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            SELECT status, COUNT(*) as count, SUM(total_price) as total
+            FROM orders
+            GROUP BY status
+        """)
+        
+        stats = cur.fetchall()
+        cur.close()
+        conn.close()
+        
+        # Convert to dict for easy template access
+        stats_dict = {
+            'total_orders': 0,
+            'total_revenue': 0,
+            'pending': 0,
+            'confirmed': 0,
+            'preparing': 0,
+            'ready': 0,
+            'completed': 0,
+            'cancelled': 0
+        }
+        
+        for stat in stats:
+            status = stat['status']
+            count = stat['count']
+            total = stat['total'] or 0
+            
+            stats_dict[status] = count
+            stats_dict['total_orders'] += count
+            stats_dict['total_revenue'] += float(total)
+        
+        return stats_dict
+        
+    except Exception as e:
+        print(f"Error fetching order stats: {e}")
+        return {
+            'total_orders': 0,
+            'total_revenue': 0,
+            'pending': 0,
+            'confirmed': 0,
+            'preparing': 0,
+            'ready': 0,
+            'completed': 0,
+            'cancelled': 0
+        }
+
+
+
+def delete_order_with_items(order_id):
+    """Delete an order (no items table in your schema, so just delete order)"""
+    try:
+        conn = get_neon_connection()
+        cur = conn.cursor()
+        
+        cur.execute("""
+            DELETE FROM orders
+            WHERE order_id = %s
+        """, (order_id,))
+        
+        conn.commit()
+        affected_rows = cur.rowcount
+        cur.close()
+        conn.close()
+        
+        return affected_rows > 0
+        
+    except Exception as e:
+        print(f"Error deleting order: {e}")
+        return False
