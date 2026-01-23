@@ -1,0 +1,54 @@
+/* Image thumbnails in table */
+.menu-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.menu-thumbnail-placeholder {
+    width: 50px;
+    height: 50px;
+    background: #ecf0f1;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: #7f8c8d;
+}
+
+/* Modal improvements */
+.modal-lg {
+    max-width: 900px;
+}
+
+/* Loading states */
+.spinner-border-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Image preview containers */
+#createImagePreview img,
+[id^="editImagePreview"] img {
+    max-height: 200px;
+    object-fit: contain;
+}
+
+/* Toast notifications positioned below navbar */
+.position-fixed.alert {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
