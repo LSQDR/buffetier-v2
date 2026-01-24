@@ -29,6 +29,7 @@
                     <span class="cart-badge" id="cart-count">0</span>
                 </a>
                 <a href="/dashboard">Dashboard</a>
+                <a href="{{ url_for('location') }}" class="text-gray-600 hover:text-blue-600">Location</a>
                 
                 <!-- Admin Menu (only for admins) -->
                 {% if session.get('is_admin') %}

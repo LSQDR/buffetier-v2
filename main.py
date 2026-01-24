@@ -188,6 +188,17 @@ def logout():
     flash('You have been logged out', 'success')
     return redirect(url_for('index'))
 
+@app.route('/location')
+def location():
+    """Location page with Google Maps"""
+    try:
+        maps_api_key = get_secret('maps-api-key')
+        return render_template('location.html', maps_api_key=maps_api_key)
+    except Exception as e:
+        logging.error(f"Error loading location page: {str(e)}")
+        flash('Unable to load map', 'error')
+        return redirect(url_for('index'))
+
 
 # ============================================
 # PROTECTED USER ROUTES
