@@ -78,37 +78,13 @@
     </div>
 </div>
 
-<script>
-// Only define initMap once
-function initMap() {
-    const position = { lat: 51.0632, lng: -1.308 };
-    
-    const map = new google.maps.Map(document.getElementById("map"), {
-        zoom: 15,
-        center: position
-    });
-    
-    const marker = new google.maps.Marker({
-        position: position,
-        map: map,
-        title: "Buffetier Restaurant",
-        animation: google.maps.Animation.DROP
-    });
-    
-    const infoWindow = new google.maps.InfoWindow({
-        content: '<div style="padding:10px;"><strong>Buffetier Restaurant</strong><br>123 Food Street, Winchester</div>'
-    });
-    
-    marker.addListener('click', function() {
-        infoWindow.open(map, marker);
-    });
-}
+{% endblock %}
 
-// Make it globally accessible
-window.initMap = initMap;
-</script>
+{% block extra_js %}
+<!-- Location Page JavaScript -->
+<script src="{{ url_for('static', filename='js/location.js') }}"></script>
 
-<!-- Load Google Maps ONLY ONCE -->
+<!-- Load Google Maps API -->
 <script async defer 
     src="https://maps.googleapis.com/maps/api/js?key={{ maps_api_key }}&callback=initMap">
 </script>

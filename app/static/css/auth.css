@@ -1,0 +1,41 @@
+/* ============================================
+   AUTH PAGES (Login/Register)
+   ============================================ */
+.auth-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.auth-box {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 450px;
+}
+
+.auth-box h1 {
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.footer-text {
+    text-align: center;
+    margin-top: 20px;
+    color: #777;
+}
+
+.footer-text a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.footer-text a:hover {
+    text-decoration: underline;
+}

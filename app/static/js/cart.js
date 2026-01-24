@@ -1,5 +1,10 @@
+/**
+ * Cart.js - Shopping Cart Management
+ * Handles cart operations: update quantity, remove items
+ */
+
 // ============================================
-// CART PAGE FUNCTIONALITY
+// QUANTITY MANAGEMENT
 // ============================================
 
 /**
@@ -8,6 +13,8 @@
  * @param {number} newQuantity - New quantity
  */
 function updateQuantity(itemId, newQuantity) {
+    newQuantity = parseInt(newQuantity);
+    
     if (newQuantity < 1) {
         removeItem(itemId);
         return;
@@ -27,42 +34,47 @@ function updateQuantity(itemId, newQuantity) {
     .then(data => {
         if (data.success) {
             location.reload();
+        } else {
+            showToast(data.error || 'Failed to update quantity', 'error');
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error. Please try again.', 'error');
+    });
 }
+
+// ============================================
+// REMOVE ITEMS
+// ============================================
 
 /**
  * Remove item from cart
  * @param {string} itemId - Item ID to remove
  */
 function removeItem(itemId) {
+    if (!confirm('Remove this item from cart?')) {
+        return;
+    }
+    
     fetch(`/api/cart/remove/${itemId}`, {
         method: 'DELETE'
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showToast('Item removed from cart');
+            showToast('Item removed from cart', 'info');
             setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.error || 'Failed to remove item', 'error');
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error. Please try again.', 'error');
+    });
 }
 
-/**
- * Show toast notification
- * @param {string} message - Message to display
- */
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => toast.classList.add('show'), 100);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2000);
-}
+// Make functions globally accessible
+window.updateQuantity = updateQuantity;
+window.removeItem = removeItem;

@@ -27,7 +27,9 @@
                 <td>{{ 'Yes' if item.available else 'No' }}</td>
                 <td>
                     <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ item._id }}">Edit</button>
-                    <form method="POST" action="{{ url_for('delete_menu_item_route', item_id=item._id) }}" style="display:inline;" onsubmit="return confirm('Delete {{ item.name }}?');">
+                    <form method="POST" action="{{ url_for('admin.delete_menu_item_route', item_id=item._id) }}" style="display:inline;" 
+                    onsubmit="return confirm('Delete {{ item.name }}?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
                 </td>
@@ -37,7 +39,8 @@
             <div class="modal fade" id="editModal{{ item._id }}">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <form method="POST" action="{{ url_for('update_menu_item_route', item_id=item._id) }}">
+                        <form method="POST" action="{{ url_for('admin.update_menu_item_route', item_id=item._id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                             <div class="modal-header">
                                 <h5 class="modal-title">Edit {{ item.name }}</h5>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -90,7 +93,8 @@
     <div class="modal fade" id="createModal">
         <div class="modal-dialog">
             <div class="modal-content">
-                <form method="POST" action="{{ url_for('create_menu_item_route') }}">
+                <form method="POST" action="{{ url_for('admin.create_menu_item_route') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="modal-header">
                         <h5 class="modal-title">Add New Menu Item</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

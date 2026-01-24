@@ -39,11 +39,11 @@
         <span>£{{ "%.2f"|format(total) }}</span>
     </div>
     
-    <form method="POST" action="/checkout">
-        <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">
-            Place Order
-        </button>
+    <form method="POST" action="{{ url_for('orders.checkout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn btn-primary">Place Order</button>
     </form>
+
 </div>
 
 {% else %}

@@ -1,0 +1,42 @@
+<!-- Navbar Component -->
+<div class="navbar">
+    <h2>🍽️ Buffetier</h2>
+    <div class="navbar-links">
+        <a href="{{ url_for('main.index') }}">Home</a>
+        {% if session.get('user_id') %}
+            <a href="{{ url_for('main.menu') }}">Menu</a>
+            <a href="{{ url_for('orders.cart') }}">
+                <i class="bi bi-cart"></i> Cart
+                <span class="cart-badge" id="cart-count">0</span>
+            </a>
+            <a href="{{ url_for('orders.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('main.location') }}">Location</a>
+            <a href="{{ url_for('reviews.reviews_page') }}">Reviews</a>
+            
+            <!-- Admin Dropdown (only for admins) -->
+            {% if session.get('is_admin') %}
+            <div class="dropdown" style="position: relative; display: inline-block;">
+                <a href="#" class="dropdown-toggle" onclick="toggleDropdown(event)">
+                    <i class="bi bi-gear"></i> Admin
+                </a>
+                <div class="dropdown-menu" id="adminDropdown" style="display: none;">
+                    <a href="{{ url_for('admin.admin_dashboard') }}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                    <a href="{{ url_for('admin.admin_menu') }}">
+                        <i class="bi bi-book"></i> Manage Menu
+                    </a>
+                    <a href="{{ url_for('admin.admin_reviews') }}">
+                        <i class="bi bi-star"></i> Manage Reviews
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            <a href="{{ url_for('auth.logout') }}">Logout</a>
+        {% else %}
+            <a href="{{ url_for('auth.login') }}">Login</a>
+            <a href="{{ url_for('auth.register') }}">Register</a>
+        {% endif %}
+    </div>
+</div>
