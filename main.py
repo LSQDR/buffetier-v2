@@ -31,7 +31,9 @@ from database.mongo_db import (
     update_menu_item,
     delete_menu_item,
     get_all_reviews,
-    delete_review
+    delete_review,
+    create_review,
+    get_review_stats 
 )
 
 
@@ -569,6 +571,85 @@ def api_clear_cart():
     session.modified = True
     return jsonify({'success': True}), 200
 
+# ============================================
+# REVIEW ROUTES
+# ============================================
+
+@app.route('/reviews')
+def reviews_page():
+    """Public reviews page showing all reviews"""
+    try:
+        reviews = get_all_reviews()
+        stats = get_review_stats()
+        
+        # Check if user is logged in
+        user_logged_in = 'user_id' in session
+        
+        return render_template('reviews.html', 
+                             reviews=reviews, 
+                             stats=stats,
+                             user_logged_in=user_logged_in)
+    except Exception as e:
+        flash(f'Error loading reviews: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+
+@app.route('/api/reviews', methods=['GET'])
+def api_get_reviews():
+    """API endpoint to get all reviews"""
+    try:
+        reviews = get_all_reviews()
+        
+        # Convert ObjectId to string for JSON serialization
+        for review in reviews:
+            review['_id'] = str(review['_id'])
+            review['created_at'] = review['created_at'].isoformat() if review.get('created_at') else None
+        
+        return jsonify(reviews), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/reviews/submit', methods=['POST'])
+@login_required
+def api_submit_review():
+    """API endpoint to submit a new review (login required)"""
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        rating = data.get('rating')
+        comment = data.get('comment', '').strip()
+        
+        if not rating or rating not in [1, 2, 3, 4, 5]:
+            return jsonify({'error': 'Invalid rating. Must be 1-5'}), 400
+        
+        if not comment or len(comment) < 10:
+            return jsonify({'error': 'Comment must be at least 10 characters'}), 400
+        
+        if len(comment) > 500:
+            return jsonify({'error': 'Comment must be less than 500 characters'}), 400
+        
+        # Get user info from session
+        user_id = session.get('user_id')
+        user_name = session.get('user_name')
+        
+        # Create review
+        review_id = create_review(user_id, user_name, rating, comment)
+        
+        if review_id:
+            return jsonify({
+                'success': True,
+                'review_id': review_id,
+                'message': 'Review submitted successfully!'
+            }), 201
+        else:
+            return jsonify({'error': 'Failed to create review'}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
 
 # ============================================
 # ADMIN ROUTES
@@ -696,13 +777,14 @@ def delete_menu_item_route(item_id):
     flash('Menu item deleted', 'success')
     return redirect(url_for('admin_menu'))
 
-# Reviews Management (Bonus)
+# Reviews Management
 @app.route('/admin/reviews')
 @admin_required
 def admin_reviews():
     """Admin reviews management page"""
     reviews = get_all_reviews()
-    return render_template('admin/reviews.html', reviews=reviews)
+    stats = get_review_stats()
+    return render_template('admin/reviews.html', reviews=reviews, stats=stats)
 
 # Delete Review
 @app.route('/admin/review/<review_id>/delete', methods=['POST'])
@@ -765,7 +847,6 @@ def delete_image():
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 # ============================================
 # ERROR HANDLERS

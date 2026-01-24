@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Reviews - Buffetier{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Customer Reviews</h1>
+    
+    <!-- Review Statistics -->
+    {% if stats and stats.total_reviews > 0 %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center">
+                    <h2 class="display-4 mb-0">{{ stats.average_rating }}</h2>
+                    <div class="text-warning mb-2">
+                        {% for i in range(5) %}
+                            {% if i < stats.average_rating|int %}
+                                <i class="bi bi-star-fill"></i>
+                            {% elif i < stats.average_rating %}
+                                <i class="bi bi-star-half"></i>
+                            {% else %}
+                                <i class="bi bi-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <p class="text-muted">{{ stats.total_reviews }} reviews</p>
+                </div>
+                <div class="col-md-8">
+                    <div class="mb-2">
+                        <span class="me-2">5 <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress d-inline-block" style="width: 60%; height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.five_star / stats.total_reviews * 100)|int }}%"></div>
+                        </div>
+                        <span class="ms-2">{{ stats.five_star }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="me-2">4 <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress d-inline-block" style="width: 60%; height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.four_star / stats.total_reviews * 100)|int }}%"></div>
+                        </div>
+                        <span class="ms-2">{{ stats.four_star }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="me-2">3 <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress d-inline-block" style="width: 60%; height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.three_star / stats.total_reviews * 100)|int }}%"></div>
+                        </div>
+                        <span class="ms-2">{{ stats.three_star }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="me-2">2 <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress d-inline-block" style="width: 60%; height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.two_star / stats.total_reviews * 100)|int }}%</div>
+                        </div>
+                        <span class="ms-2">{{ stats.two_star }}</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="me-2">1 <i class="bi bi-star-fill text-warning"></i></span>
+                        <div class="progress d-inline-block" style="width: 60%; height: 20px;">
+                            <div class="progress-bar bg-warning" style="width: {{ (stats.one_star / stats.total_reviews * 100)|int }}%"></div>
+                        </div>
+                        <span class="ms-2">{{ stats.one_star }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Submit Review Form -->
+    {% if user_logged_in %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Leave a Review</h5>
+        </div>
+        <div class="card-body">
+            <form id="reviewForm">
+                <div class="mb-3">
+                    <label class="form-label">Rating</label>
+                    <div class="star-rating" id="starRating">
+                        <i class="bi bi-star" data-rating="1"></i>
+                        <i class="bi bi-star" data-rating="2"></i>
+                        <i class="bi bi-star" data-rating="3"></i>
+                        <i class="bi bi-star" data-rating="4"></i>
+                        <i class="bi bi-star" data-rating="5"></i>
+                    </div>
+                    <input type="hidden" id="ratingInput" name="rating" required>
+                    <small class="text-danger d-none" id="ratingError">Please select a rating</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="comment" class="form-label">Your Review</label>
+                    <textarea class="form-control" id="comment" name="comment" rows="4" 
+                              placeholder="Share your experience..." required minlength="10" maxlength="500"></textarea>
+                    <small class="text-muted">Minimum 10 characters, maximum 500</small>
+                    <small class="text-danger d-none" id="commentError"></small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    Submit Review
+                </button>
+                <div class="alert alert-success d-none mt-3" id="successMessage"></div>
+                <div class="alert alert-danger d-none mt-3" id="errorMessage"></div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i> 
+        <a href="{{ url_for('login') }}">Login</a> to leave a review
+    </div>
+    {% endif %}
+    
+    <!-- Reviews List -->
+    <h3 class="mb-3">All Reviews</h3>
+    
+    {% if reviews %}
+        {% for review in reviews %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="card-title mb-1">{{ review.user_name }}</h5>
+                        <div class="text-warning mb-2">
+                            {% for i in range(review.rating) %}
+                                <i class="bi bi-star-fill"></i>
+                            {% endfor %}
+                            {% for i in range(5 - review.rating) %}
+                                <i class="bi bi-star"></i>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        {{ review.created_at.strftime('%B %d, %Y') if review.created_at else 'Recently' }}
+                    </small>
+                </div>
+                <p class="card-text">{{ review.comment }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No reviews yet. Be the first to leave one!
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.star-rating {
+    font-size: 2.5rem;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.star-rating i {
+    color: #ddd;
+    transition: color 0.2s;
+    margin-right: 8px;
+}
+
+.star-rating i:hover,
+.star-rating i.hover {
+    color: #ffc107;
+}
+
+.star-rating i.selected {
+    color: #ffc107;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reviews.js') }}"></script>
+{% endblock %}

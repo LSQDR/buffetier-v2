@@ -30,6 +30,8 @@
                 </a>
                 <a href="/dashboard">Dashboard</a>
                 <a href="{{ url_for('location') }}" class="text-gray-600 hover:text-blue-600">Location</a>
+                <a href="{{ url_for('reviews_page') }}" class="nav-link">Reviews</a>
+
                 
                 <!-- Admin Menu (only for admins) -->
                 {% if session.get('is_admin') %}

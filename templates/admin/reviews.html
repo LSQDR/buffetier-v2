@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Reviews Management{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Reviews Management</h1>
+    
+    <div class="mb-3">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    
+    <!-- Statistics -->
+    {% if stats %}
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3>{{ stats.total_reviews }}</h3>
+                    <p class="text-muted">Total Reviews</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3>{{ stats.average_rating }}</h3>
+                    <p class="text-muted">Average Rating</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3>{{ stats.five_star }}</h3>
+                    <p class="text-muted">5-Star Reviews</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3>{{ stats.one_star }}</h3>
+                    <p class="text-muted">1-Star Reviews</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Reviews Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">All Reviews ({{ reviews|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if reviews %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Rating</th>
+                            <th>Comment</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for review in reviews %}
+                        <tr>
+                            <td>
+                                <strong>{{ review.user_name }}</strong><br>
+                                <small class="text-muted">ID: {{ review.user_id }}</small>
+                            </td>
+                            <td>
+                                <div class="text-warning">
+                                    {% for i in range(review.rating) %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - review.rating) %}
+                                        <i class="bi bi-star"></i>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-muted">{{ review.rating }}/5</small>
+                            </td>
+                            <td style="max-width: 300px;">
+                                <p class="mb-0">{{ review.comment }}</p>
+                            </td>
+                            <td>
+                                {{ review.created_at.strftime('%Y-%m-%d %H:%M') if review.created_at else 'N/A' }}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('delete_review_route', review_id=review._id) }}" 
+                                      style="display: inline;"
+                                      onsubmit="return confirm('Are you sure you want to delete this review?');">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No reviews yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

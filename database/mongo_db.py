@@ -1,6 +1,12 @@
 from pymongo import MongoClient
 from bson import ObjectId
 import os
+from datetime import datetime, timezone
+
+# ============================================
+# DATABASE SETUP
+# ============================================
+
 
 def get_mongo_client():
     """Get MongoDB client with credentials from Secret Manager"""
@@ -113,20 +119,54 @@ def delete_menu_item(item_id):
 # REVIEW OPERATIONS
 # ============================================
 
+
 def get_all_reviews():
-    """Retrieve all reviews"""
+    """Retrieve all reviews sorted by newest first"""
     try:
-        reviews = list(reviews_collection.find())
+        reviews = list(reviews_collection.find().sort('created_at', -1))
+        print(f"✓ Retrieved {len(reviews)} reviews from MongoDB")
         return reviews
     except Exception as e:
         print(f"Error fetching reviews: {e}")
         return []
 
 
-def create_review(review_data):
-    """Create a new review"""
+def get_reviews_by_user(user_id):
+    """Get all reviews by a specific user"""
     try:
+        reviews = list(reviews_collection.find({'user_id': user_id}).sort('created_at', -1))
+        return reviews
+    except Exception as e:
+        print(f"Error fetching user reviews: {e}")
+        return []
+
+
+def create_review(user_id, user_name, rating, comment):
+    """
+    Create a new review.
+    
+    Schema:
+    {
+        'user_id': int,           # from Neon users table
+        'user_name': str,         # denormalized for display
+        'rating': int,            # 1-5 stars
+        'comment': str,           # review text
+        'created_at': datetime    # timestamp
+    }
+    """
+    try:
+        review_data = {
+            'user_id': int(user_id),
+            'user_name': user_name,
+            'rating': int(rating),
+            'comment': comment,
+            'created_at': datetime.now(timezone.utc)
+
+
+        }
+        
         result = reviews_collection.insert_one(review_data)
+        print(f"✓ Created review by {user_name} with rating {rating}")
         return str(result.inserted_id)
     except Exception as e:
         print(f"Error creating review: {e}")
@@ -134,10 +174,60 @@ def create_review(review_data):
 
 
 def delete_review(review_id):
-    """Delete a review by ID"""
+    """Delete a review by ID (admin only)"""
     try:
         result = reviews_collection.delete_one({'_id': ObjectId(review_id)})
+        print(f"✓ Deleted review: {review_id}")
         return result.deleted_count > 0
     except Exception as e:
         print(f"Error deleting review: {e}")
         return False
+
+
+def get_review_stats():
+    """Get review statistics"""
+    try:
+        pipeline = [
+            {
+                '$group': {
+                    '_id': None,
+                    'total_reviews': {'$sum': 1},
+                    'average_rating': {'$avg': '$rating'},
+                    'five_star': {
+                        '$sum': {'$cond': [{'$eq': ['$rating', 5]}, 1, 0]}
+                    },
+                    'four_star': {
+                        '$sum': {'$cond': [{'$eq': ['$rating', 4]}, 1, 0]}
+                    },
+                    'three_star': {
+                        '$sum': {'$cond': [{'$eq': ['$rating', 3]}, 1, 0]}
+                    },
+                    'two_star': {
+                        '$sum': {'$cond': [{'$eq': ['$rating', 2]}, 1, 0]}
+                    },
+                    'one_star': {
+                        '$sum': {'$cond': [{'$eq': ['$rating', 1]}, 1, 0]}
+                    }
+                }
+            }
+        ]
+        
+        result = list(reviews_collection.aggregate(pipeline))
+        
+        if result:
+            stats = result[0]
+            stats['average_rating'] = round(stats['average_rating'], 1) if stats['average_rating'] else 0
+            return stats
+        else:
+            return {
+                'total_reviews': 0,
+                'average_rating': 0,
+                'five_star': 0,
+                'four_star': 0,
+                'three_star': 0,
+                'two_star': 0,
+                'one_star': 0
+            }
+    except Exception as e:
+        print(f"Error fetching review stats: {e}")
+        return None
