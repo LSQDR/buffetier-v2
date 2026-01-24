@@ -52,7 +52,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const rating = ratingInput.value;
         const comment = document.getElementById('comment').value.trim();
-        
+
+        // Get CSRF token from form
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
         // Validation
         let hasError = false;
         
@@ -86,7 +89,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/api/reviews/submit', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken  // ← Add this
                 },
                 body: JSON.stringify({
                     rating: parseInt(rating),

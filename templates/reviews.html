@@ -76,6 +76,8 @@
         </div>
         <div class="card-body">
             <form id="reviewForm">
+                {{ csrf_token() }}
+                
                 <div class="mb-3">
                     <label class="form-label">Rating</label>
                     <div class="star-rating" id="starRating">

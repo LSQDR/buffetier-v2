@@ -5,10 +5,24 @@ import os
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 from database import neon_db, mongo_db 
 from datetime import datetime, timedelta
-from utils.auth import login_required, admin_required
+from utils.auth import login_required, admin_required, log_security_event
 from utils.cloud_storage import upload_menu_image, delete_menu_image
 from utils.secrets import get_secret
 from utils.email import send_order_confirmation, send_order_status_update
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import logging
+
+
+from utils.validation import (
+    validate_email_address,
+    validate_password_strength,
+    validate_phone_number,
+    sanitize_html_input,
+    contains_sql_injection_patterns,
+    validate_length
+)
 
 from database.neon_db import (
     register_user,
@@ -44,6 +58,36 @@ from database.mongo_db import (
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
+# ============================================
+# SECURITY CONFIGURATION
+# ============================================
+
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# Rate Limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+# Session Security
+app.config['SESSION_COOKIE_SECURE'] = True  # HTTPS only
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent XSS access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30 min timeout
+
+# Make sessions permanent (but with timeout)
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
+
+# ============================================
+#   CACHE SETUP
+# ============================================
 menu_cache = {
     'items': None,
     'timestamp': None,
@@ -104,9 +148,10 @@ def menu_page():
 # ============================================
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per hour")  # Rate limit registration attempts
 def register():
     """
-    Handle user registration.
+    Handle user registration with input validation.
     
     GET: Display registration form
     POST: Process registration and create user account
@@ -115,17 +160,57 @@ def register():
         Registration template or redirect to dashboard
     """
     if request.method == 'POST':
-        email = request.form.get('email')
-        name = request.form.get('name')
-        phone = request.form.get('phone')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        email = request.form.get('email', '').strip()
+        name = request.form.get('name', '').strip()
+        phone = request.form.get('phone', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
         
-        # Validate input
+        # Validate all fields present
         if not all([email, name, phone, password, confirm_password]):
             flash('All fields are required', 'error')
             return render_template('register.html')
         
+        # Sanitize inputs
+        name = sanitize_html_input(name)
+        
+        # Check for SQL injection patterns
+        if contains_sql_injection_patterns(name) or contains_sql_injection_patterns(email):
+            log_security_event(
+                'SQL_INJECTION_ATTEMPT',
+                message=f"Registration attempt with suspicious input: {email}",
+                ip_address=request.remote_addr
+            )
+            flash('Invalid input detected', 'error')
+            return render_template('register.html')
+        
+        # Validate email
+        email_valid, email_result = validate_email_address(email)
+        if not email_valid:
+            flash(f'Invalid email: {email_result}', 'error')
+            return render_template('register.html')
+        email = email_result  # Use normalized email
+        
+        # Validate name length
+        name_valid, name_error = validate_length(name, min_length=2, max_length=100, field_name="Name")
+        if not name_valid:
+            flash(name_error, 'error')
+            return render_template('register.html')
+        
+        # Validate phone number
+        phone_valid, phone_result = validate_phone_number(phone)
+        if not phone_valid:
+            flash(phone_result, 'error')
+            return render_template('register.html')
+        phone = phone_result  # Use normalized phone
+        
+        # Validate password strength
+        password_valid, password_error = validate_password_strength(password)
+        if not password_valid:
+            flash(password_error, 'error')
+            return render_template('register.html')
+        
+        # Check passwords match
         if password != confirm_password:
             flash('Passwords do not match', 'error')
             return render_template('register.html')
@@ -137,11 +222,22 @@ def register():
             return render_template('register.html')
         
         # Create new user
-        user_id = neon_db.register_user(email, name, phone, password)
+        user_id = neon_db.register_user(name, email, password, phone)
         
         if user_id:
+            # Set session
             session['user_id'] = user_id
             session['user_name'] = name
+            session['is_admin'] = False
+            
+            # Log successful registration
+            log_security_event(
+                'USER_REGISTERED',
+                user_id=user_id,
+                message=f"New user registered: {email}",
+                ip_address=request.remote_addr
+            )
+            
             flash('Registration successful!', 'success')
             return redirect(url_for('dashboard'))
         else:
@@ -151,30 +247,69 @@ def register():
     return render_template('register.html')
 
 
+
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per hour")  # Rate limit login attempts
 def login():
-    """Handle user login"""
+    """Handle user login with security logging"""
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
         
-        # Use authenticate_user from neon_db
+        # Validate inputs
+        if not email or not password:
+            flash('Email and password are required', 'danger')
+            return redirect(url_for('login'))
+        
+        # Sanitize email
+        email = sanitize_html_input(email)
+        
+        # Check for SQL injection
+        if contains_sql_injection_patterns(email):
+            log_security_event(
+                'SQL_INJECTION_ATTEMPT',
+                message=f"Login attempt with suspicious email: {email}",
+                ip_address=request.remote_addr
+            )
+            flash('Invalid credentials', 'danger')
+            return redirect(url_for('login'))
+        
+        # Authenticate user
         user = neon_db.authenticate_user(email, password)
         
         if user:
+            # Regenerate session ID to prevent session fixation
+            session.clear()
+            
             # Set session variables
             session['user_id'] = user['user_id']
             session['user_name'] = user['name']
-            session['is_admin'] = user.get('is_admin', False)  # Add admin status
+            session['is_admin'] = user.get('is_admin', False)
+            
+            # Log successful login
+            log_security_event(
+                'LOGIN_SUCCESS',
+                user_id=user['user_id'],
+                message=f"User logged in: {email}",
+                ip_address=request.remote_addr
+            )
             
             flash('Login successful!', 'success')
             return redirect(url_for('index'))
         else:
+            # Log failed login attempt
+            log_security_event(
+                'LOGIN_FAILED',
+                message=f"Failed login attempt for: {email}",
+                ip_address=request.remote_addr
+            )
+            
             flash('Invalid email or password', 'danger')
             return redirect(url_for('login'))
     
     # GET request - show login form
     return render_template('login.html')
+
 
 
 
@@ -186,6 +321,16 @@ def logout():
     Returns:
         Redirect to home page
     """
+    user_id = session.get('user_id')
+    
+    # Log logout
+    log_security_event(
+        'LOGOUT',
+        user_id=user_id,
+        message="User logged out",
+        ip_address=request.remote_addr
+    )
+    
     session.clear()
     flash('You have been logged out', 'success')
     return redirect(url_for('index'))
