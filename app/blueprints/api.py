@@ -8,6 +8,7 @@ from database import neon_db, mongo_db
 from utils.auth import login_required
 from app.extensions import csrf
 from utils.cloud_storage import upload_menu_image
+import json
 
 
 api_bp = Blueprint('api', __name__)
@@ -17,6 +18,7 @@ api_bp = Blueprint('api', __name__)
 # MENU API
 # ============================================
 
+
 @api_bp.route('/menu', methods=['GET'])
 def get_menu():
     """API endpoint to get menu items"""
@@ -24,11 +26,10 @@ def get_menu():
         category = request.args.get('category')
         
         if category:
-            items = mongo_db.get_menu_by_category(category)
+            items = list(mongo_db.menu_collection.find({'category': category}))
         else:
             items = mongo_db.get_all_menu_items()
         
-        # Convert ObjectId to string for JSON serialization
         for item in items:
             item['_id'] = str(item['_id'])
         
@@ -40,6 +41,7 @@ def get_menu():
 # ============================================
 # ORDERS API
 # ============================================
+
 
 @api_bp.route('/orders', methods=['POST'])
 @login_required
@@ -56,7 +58,12 @@ def create_order():
         items = data['items']
         
         total_price = sum(item['price'] * item['quantity'] for item in items)
-        order_id = neon_db.create_order(user_id, table_number, total_price, items)
+        order_id = neon_db.create_order(
+            user_id=user_id,
+            items=json.dumps(items),
+            total_amount=total_price,
+            table_number=table_number
+        )
         
         return jsonify({
             'order_id': order_id,
@@ -72,15 +79,15 @@ def create_order():
 def get_user_orders(user_id):
     """API endpoint to get all orders for a user"""
     try:
-        orders = neon_db.get_all_orders(user_id)
+        orders = neon_db.get_user_orders(user_id)
         
         orders_list = []
         for order in orders:
             orders_list.append({
-                'order_id': order[0],
-                'total_price': float(order[1]),
-                'status': order[2],
-                'created_at': str(order[3])
+                'order_id': order['order_id'],
+                'total_price': float(order['total_amount']),
+                'status': order['status'],
+                'created_at': str(order['order_date'])
             })
         
         return jsonify(orders_list), 200
@@ -110,6 +117,7 @@ def update_order(order_id):
 # CART API
 # ============================================
 
+
 @api_bp.route('/cart/add', methods=['POST'])
 @login_required
 def add_to_cart():
@@ -122,7 +130,6 @@ def add_to_cart():
     cart = session['cart']
     item_id = str(data.get('item_id'))
     
-    # Check if item already in cart
     if item_id in cart:
         cart[item_id]['quantity'] += 1
     else:
@@ -192,11 +199,11 @@ def clear_cart():
 # IMAGE UPLOAD API
 # ============================================
 
+
 @api_bp.route('/upload-image', methods=['POST'])
 def upload_image():
     """API endpoint to upload menu item image to Cloud Storage"""
     try:
-        # Check if admin
         if not session.get('is_admin'):
             return jsonify({'success': False, 'error': 'Admin access required'}), 403
         
@@ -208,7 +215,6 @@ def upload_image():
         if file.filename == '':
             return jsonify({'success': False, 'error': 'No file selected'}), 400
         
-        # Upload to Cloud Storage
         public_url = upload_menu_image(file)
         
         return jsonify({
@@ -224,4 +230,3 @@ def upload_image():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': f'Upload failed: {str(e)}'}), 500
-

@@ -1,9 +1,15 @@
 import pytest
 import requests
 import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 # Get function URL from environment
 PROCESS_ORDER_URL = os.environ.get('PROCESS_ORDER_FUNCTION_URL')
+GET_MENU_URL = os.environ.get('GET_MENU_FUNCTION_URL')
+UPDATE_ORDER_URL = os.environ.get('UPDATE_ORDER_FUNCTION_URL')
 
 @pytest.mark.skipif(not PROCESS_ORDER_URL, reason="Function URL not set")
 def test_process_order_function():
