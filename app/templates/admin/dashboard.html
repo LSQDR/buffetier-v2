@@ -97,7 +97,8 @@
                 <td>{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}</td>
                 <td>
                     <!-- Status Update Dropdown -->
-                    <form method="POST" action="{{ url_for('update_order_status_route', order_id=order.order_id) }}" style="display:inline;">
+                    <form method="POST" action="{{ url_for('admin.update_order_status_route', order_id=order.order_id) }}" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <select name="status" class="form-select form-select-sm d-inline-block" style="width:auto;" onchange="this.form.submit()">
                             <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
                             <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
@@ -109,7 +110,9 @@
                     </form>
                     
                     <!-- Delete Button -->
-                    <form method="POST" action="{{ url_for('delete_order_route', order_id=order.order_id) }}" style="display:inline;" onsubmit="return confirm('Delete order #{{ order.order_id }}?');">
+                    <form method="POST" action="{{ url_for('admin.delete_order_route', order_id=order.order_id) }}" style="display:inline;" 
+                    onsubmit="return confirm('Delete order #{{ order.order_id }}?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <button type="submit" class="btn btn-sm btn-danger">
                             <i class="bi bi-trash"></i> Delete
                         </button>

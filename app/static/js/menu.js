@@ -1,10 +1,15 @@
+/**
+ * Menu.js - Menu Page Functionality
+ * Handles category filtering and adding items to cart
+ */
+
 // ============================================
-// MENU PAGE FUNCTIONALITY
+// CATEGORY FILTERING
 // ============================================
 
 /**
  * Filter menu items by category
- * @param {string} category - Category to filter by
+ * @param {string} category - Category to filter by ('all' or specific category)
  */
 function filterCategory(category) {
     const items = document.querySelectorAll('.menu-item');
@@ -24,6 +29,10 @@ function filterCategory(category) {
     });
 }
 
+// ============================================
+// ADD TO CART
+// ============================================
+
 /**
  * Add item to shopping cart
  * @param {string} itemId - Item ID
@@ -31,61 +40,40 @@ function filterCategory(category) {
  * @param {number} itemPrice - Item price
  */
 function addToCart(itemId, itemName, itemPrice) {
+
+    // Get CSRF token from meta tag
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
     fetch('/api/cart/add', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
             item_id: itemId,
             name: itemName,
-            price: itemPrice,
+            price: parseFloat(itemPrice),
             quantity: 1
         })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            updateCartCount();
-            showToast(`${itemName} added to cart!`);
+            if (typeof updateCartCount === 'function') {
+                updateCartCount();
+            }
+            showToast(`${itemName} added to cart!`, 'success');
+        } else {
+            showToast(data.error || 'Failed to add item', 'error');
         }
     })
-    .catch(error => console.error('Error:', error));
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Network error. Please try again.', 'error');
+    });
 }
 
-/**
- * Update cart count badge
- */
-function updateCartCount() {
-    fetch('/api/cart/count')
-        .then(response => response.json())
-        .then(data => {
-            const badge = document.getElementById('cart-count');
-            if (badge) {
-                badge.textContent = data.count;
-            }
-        })
-        .catch(error => console.error('Error:', error));
-}
-
-/**
- * Show toast notification
- * @param {string} message - Message to display
- */
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => toast.classList.add('show'), 100);
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2000);
-}
-
-// Load cart count on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateCartCount();
-});
+// Make functions globally accessible
+window.filterCategory = filterCategory;
+window.addToCart = addToCart;
