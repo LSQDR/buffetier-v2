@@ -12,6 +12,10 @@
  * @param {string} itemId - Item ID
  * @param {number} newQuantity - New quantity
  */
+
+// Get CSRF token from meta tag
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
 function updateQuantity(itemId, newQuantity) {
     newQuantity = parseInt(newQuantity);
     
@@ -24,6 +28,7 @@ function updateQuantity(itemId, newQuantity) {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
         },
         body: JSON.stringify({
             item_id: itemId,
@@ -53,12 +58,17 @@ function updateQuantity(itemId, newQuantity) {
  * @param {string} itemId - Item ID to remove
  */
 function removeItem(itemId) {
+
     if (!confirm('Remove this item from cart?')) {
         return;
     }
     
     fetch(`/api/cart/remove/${itemId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
     })
     .then(response => response.json())
     .then(data => {
