@@ -43,11 +43,15 @@ async function uploadImage(file, mode, itemId = '') {
     
     const formData = new FormData();
     formData.append('image', file);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
     
     try {
         const response = await fetch(API_UPLOAD, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
         });
         
         const result = await response.json();
@@ -115,8 +119,8 @@ function hideElement(id) {
  */
 function showNotification(message, type) {
     const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-    toast.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px; margin: 0;';
     toast.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
     
     document.body.appendChild(toast);

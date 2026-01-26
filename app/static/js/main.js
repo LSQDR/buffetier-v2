@@ -93,8 +93,9 @@ document.addEventListener('click', function(event) {
  */
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = 'toast';
     toast.textContent = message;
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    toast.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px; margin: 0;';
     
     // Add type-specific styling
     if (type === 'error') {
