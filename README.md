@@ -10,7 +10,7 @@ A modern, full-stack restaurant ordering application built with Flask and deploy
 
 Buffetier is a cloud-native restaurant ordering system that demonstrates enterprise-level architecture using:
 - **Microservices**: Serverless Cloud Functions for scalable operations
-- **Dual Databases**: PostgreSQL (Neon) for transactional data, MongoDB for flexible content
+- **Dual Databases**: PostgreSQL for transactional data, MongoDB for flexible content
 - **Cloud Storage**: Image hosting for menu items
 - **Security**: RBAC, CSRF protection, rate limiting, input validation
 - **Email Notifications**: SendGrid integration for order confirmations
@@ -65,7 +65,7 @@ Buffetier is a cloud-native restaurant ordering system that demonstrates enterpr
 
 ### System Architecture
 
-\`\`\`
+```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Client (Browser)                         │
 └────────────────────┬────────────────────────────────────────┘
@@ -98,14 +98,14 @@ Buffetier is a cloud-native restaurant ordering system that demonstrates enterpr
       │  • process-order            │
       │  • update-order             │
       └─────────────────────────────┘
-\`\`\`
+```
 
 ### Request Flow Example: Place Order
 
 1. **User submits order** → Cart page
 2. **POST /checkout** → Orders Blueprint
-3. **Create order** → Neon PostgreSQL (orders + order_items tables)
-4. **Send email** → SendGrid API (confirmation email)
+3. **Create order** → Neon PostgreSQL orders + order_items tables
+4. **Send email** → SendGrid API confirmation email
 5. **Clear cart** → Session management
 6. **Redirect** → User dashboard with success message
 
@@ -121,22 +121,22 @@ Buffetier is a cloud-native restaurant ordering system that demonstrates enterpr
 - **Rate Limiting**: Flask-Limiter
 
 ### Databases
-- **PostgreSQL**: Neon (users, orders, order_items)
-- **MongoDB**: Atlas (menu items, reviews)
+- **PostgreSQL**: Neon users, orders, order_items
+- **MongoDB**: Atlas menu items, reviews
 
-### Cloud Services (GCP)
-- **Hosting**: Google App Engine (Python 3.12 runtime)
-- **Functions**: Cloud Functions (Gen 2)
-- **Storage**: Cloud Storage (menu images)
-- **Secrets**: Secret Manager (credentials)
+### Cloud Services
+- **Hosting**: Google App Engine Python 3.12 runtime
+- **Functions**: Cloud Functions 
+- **Storage**: Cloud Storage 
+- **Secrets**: Secret Manager 
 
 ### External Services
 - **Email**: SendGrid API
-- **Maps**: Google Maps API (location page)
+- **Maps**: Google Maps API
 
 ### Security
 - **CSRF Protection**: Flask-WTF
-- **Rate Limiting**: Flask-Limiter (5 requests/min on auth endpoints)
+- **Rate Limiting**: Flask-Limiter 
 - **Input Validation**: bleach, email-validator, custom validators
 - **Password Hashing**: SHA-256
 - **XSS Prevention**: HTML sanitization
@@ -145,107 +145,15 @@ Buffetier is a cloud-native restaurant ordering system that demonstrates enterpr
 ### Frontend
 - **UI Framework**: Bootstrap 5
 - **Icons**: Bootstrap Icons
-- **JavaScript**: Vanilla JS (cart management, dynamic UI)
-
----
-
-##  Prerequisites
-
-Before installation, ensure you have:
-
-- **Python 3.12+** installed
-- **Google Cloud Account** with billing enabled
-- **GCP Project** created
-- **gcloud CLI** installed and configured
-- **MongoDB Atlas** account (free tier works)
-- **Neon PostgreSQL** account (free tier works)
-- **SendGrid** account (optional for emails)
-- **Git** installed
-
----
-
-##  Installation
-
-### 1. Clone Repository
-
-\`\`\`bash
-git clone https://github.com/yourusername/buffetier.git
-cd buffetier
-\`\`\`
-
-### 2. Create Virtual Environment
-
-\`\`\`bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-\`\`\`
-
-### 3. Install Dependencies
-
-\`\`\`bash
-pip install -r requirements.txt
-\`\`\`
-
-### 4. Set Up Environment Variables
-
-Create a \`.env\` file in the root directory:
-
-\`\`\`env
-# Flask Configuration
-FLASK_ENV=development
-SECRET_KEY=your-secret-key-change-in-production
-
-# Database URLs
-DATABASE_URL=postgresql://user:pass@host/database
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/buffetier
-
-# Google Cloud
-GOOGLE_CLOUD_PROJECT=your-project-id
-GCS_BUCKET_NAME=your-bucket-name
-
-# SendGrid (Optional)
-SENDGRID_API_KEY=your-sendgrid-api-key
-
-# Google Maps (Optional)
-MAPS_API_KEY=your-maps-api-key
-\`\`\`
-
----
-
-##  Configuration
-
-### Flask Configurations (config.py)
-
-The application supports three configuration modes:
-
-1. **Development** - Debug enabled, less strict rate limits
-2. **Production** - Debug disabled, secure cookies, strict rate limits
-3. **Testing** - CSRF disabled, test database
-
-Configuration is automatically selected based on \`FLASK_ENV\` environment variable.
-
-### Security Settings
-
-| Setting | Development | Production |
-|---------|-------------|------------|
-| DEBUG | True | False |
-| SESSION_COOKIE_SECURE | False | True |
-| SESSION_LIFETIME | 30 minutes | 30 minutes |
-| RATE_LIMIT | 200/day, 50/hour | 100/day, 30/hour |
-| WTF_CSRF_ENABLED | True | True |
+- **JavaScript**: Vanilla JS
 
 ---
 
 ##  Database Setup
 
-### PostgreSQL (Neon) Schema
+### PostgreSQL Neon Schema
 
-\`\`\`sql
+```sql
 -- Users table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
@@ -277,12 +185,12 @@ CREATE TABLE order_items (
     quantity INTEGER NOT NULL,
     price DECIMAL(10,2) NOT NULL
 );
-\`\`\`
+```
 
 ### MongoDB Collections
 
 **Menu Collection Schema:**
-\`\`\`json
+```json
 {
   "_id": ObjectId,
   "item_id": "string",
@@ -293,10 +201,10 @@ CREATE TABLE order_items (
   "available": boolean,
   "image_url": "string"
 }
-\`\`\`
+```
 
 **Reviews Collection Schema:**
-\`\`\`json
+```json
 {
   "_id": ObjectId,
   "user_id": integer,
@@ -305,106 +213,7 @@ CREATE TABLE order_items (
   "comment": "string",
   "created_at": datetime
 }
-\`\`\`
-
-### Database Initialization
-
-\`\`\`bash
-# Connect to Neon PostgreSQL and run schema
-psql $DATABASE_URL < schema.sql
-
-# MongoDB collections are auto-created on first insert
-\`\`\`
-
----
-
-##  Deployment
-
-### Google App Engine Deployment
-
-#### 1. Set Up GCP Project
-
-\`\`\`bash
-gcloud init
-gcloud config set project YOUR_PROJECT_ID
-\`\`\`
-
-#### 2. Enable Required APIs
-
-\`\`\`bash
-gcloud services enable appengine.googleapis.com
-gcloud services enable cloudfunctions.googleapis.com
-gcloud services enable storage.googleapis.com
-gcloud services enable secretmanager.googleapis.com
-\`\`\`
-
-#### 3. Create Cloud Storage Bucket
-
-\`\`\`bash
-gsutil mb gs://buffetier-menu-images
-gsutil iam ch allUsers:objectViewer gs://buffetier-menu-images
-\`\`\`
-
-#### 4. Store Secrets in Secret Manager
-
-\`\`\`bash
-echo -n "your-neon-db-url" | gcloud secrets create neon-db-uri --data-file=-
-echo -n "your-mongo-uri" | gcloud secrets create mongodb-uri --data-file=-
-echo -n "your-sendgrid-key" | gcloud secrets create sendgrid-api-key --data-file=-
-echo -n "your-maps-key" | gcloud secrets create maps-api-key --data-file=-
-\`\`\`
-
-#### 5. Deploy Main Application
-
-\`\`\`bash
-gcloud app deploy app.yaml
-\`\`\`
-
-#### 6. Deploy Cloud Functions
-
-\`\`\`bash
-# Get Menu Function
-cd cloud-functions/get-menu
-gcloud functions deploy get-menu \
-  --gen2 \
-  --runtime=python312 \
-  --region=europe-west2 \
-  --source=. \
-  --entry-point=get_menu \
-  --trigger-http \
-  --allow-unauthenticated \
-  --set-env-vars MONGODB_URI="your-mongo-uri"
-
-# Process Order Function
-cd ../process-order
-gcloud functions deploy process-order \
-  --gen2 \
-  --runtime=python312 \
-  --region=europe-west2 \
-  --source=. \
-  --entry-point=process_order \
-  --trigger-http \
-  --allow-unauthenticated \
-  --set-env-vars DATABASE_URL="your-neon-db-url"
-
-# Update Order Function
-cd ../update-order
-gcloud functions deploy update-order \
-  --gen2 \
-  --runtime=python312 \
-  --region=europe-west2 \
-  --source=. \
-  --entry-point=update_order \
-  --trigger-http \
-  --allow-unauthenticated \
-  --set-env-vars DATABASE_URL="your-neon-db-url"
-\`\`\`
-
-#### 7. View Deployed Application
-
-\`\`\`bash gcloud app deploy app.yaml\`\`\`
-
----
+```
 
 ##  API Documentation
 
@@ -418,10 +227,10 @@ Quick Reference:
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| \`/api/menu\` | GET | None | Get all menu items |
-| \`/api/orders\` | POST | Required | Create new order |
-| \`/api/cart/add\` | POST | Required | Add item to cart |
-| \`/api/reviews/submit\` | POST | Required | Submit review |
+| `/api/menu` | GET | None | Get all menu items |
+| `/api/orders` | POST | Required | Create new order |
+| `/api/cart/add` | POST | Required | Add item to cart |
+| `/api/reviews/submit` | POST | Required | Submit review |
 
 ---
 
@@ -465,7 +274,7 @@ Quick Reference:
 - **Password Hashing**: SHA-256 encryption
 - **Session Management**: 30-minute timeout, HTTP-only cookies
 - **Role-Based Access Control (RBAC)**: Admin vs regular users
-- **Decorators**: \`@login_required\`, \`@admin_required\`
+- **Decorators**: `@login_required`, `@admin_required`
 
 ### 2. Input Validation
 - **Email**: RFC 5322 compliant validation
@@ -475,14 +284,14 @@ Quick Reference:
 
 ### 3. Attack Prevention
 - **CSRF Protection**: Flask-WTF tokens on all forms
-- **SQL Injection**: Parameterized queries (no raw SQL)
+- **SQL Injection**: Parameterized queries
 - **XSS Prevention**: HTML escaping and sanitization
 - **Rate Limiting**: 5 requests/min on auth endpoints
 
 ### 4. Secure Configuration
 - **Environment Variables**: Sensitive data in .env files
 - **Secret Manager**: Production credentials in GCP Secret Manager
-- **HTTPS Only**: Enforced via \`secure: always\` in app.yaml
+- **HTTPS Only**: Enforced via `secure: always` in app.yaml
 - **Security Headers**: Content-Security-Policy, X-Frame-Options
 
 ### 5. Audit Logging
@@ -493,7 +302,7 @@ Quick Reference:
 
 ##  Project Structure
 
-\`\`\`
+```
 buffetier/
 ├── app/
 │   ├── __init__.py              # App factory
@@ -529,6 +338,6 @@ buffetier/
 ├── app.yaml                    # App Engine config
 ├── requirements.txt            # Python dependencies
 └── .env                        # Environment variables
-\`\`\`
+```
 
 ---
