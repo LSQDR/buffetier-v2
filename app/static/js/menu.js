@@ -9,7 +9,7 @@
 
 /**
  * Filter menu items by category
- * @param {string} category - Category to filter by ('all' or specific category)
+ * @param {string} category - Category to filter by 
  */
 function filterCategory(category) {
     const items = document.querySelectorAll('.menu-item');

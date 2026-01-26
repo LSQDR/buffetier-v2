@@ -4,9 +4,9 @@
  */
 
 // Restaurant location
-const RESTAURANT_LOCATION = { lat: 51.0632, lng: -1.308 };
+const RESTAURANT_LOCATION = { lat: 50.7435, lng: -1.8983 };
 const RESTAURANT_NAME = 'Buffetier Restaurant';
-const RESTAURANT_ADDRESS = '123 Food Street, Winchester';
+const RESTAURANT_ADDRESS = '123 Food Street, Bournemouth, UK';
 
 /**
  * Initialize Google Map

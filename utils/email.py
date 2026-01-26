@@ -90,7 +90,7 @@ def send_order_confirmation(to_email, user_name, order_details):
                        <a href="http://localhost:8080/dashboard" style="color: #667eea;">dashboard</a>.</p>
                 </div>
                 <div class="footer">
-                    <p>Buffetier Restaurant | Winchester, UK</p>
+                    <p>Buffetier Restaurant | Bournemouth, UK</p>
                     <p>This is an automated email. Please do not reply.</p>
                 </div>
             </div>

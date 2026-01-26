@@ -41,3 +41,16 @@ th {
     background: #f8d7da;
     color: #721c24;
 }
+
+.status-form {
+    display: inline;
+}
+
+.status-select {
+    display: inline-block;
+    width: auto;
+}
+
+.delete-form {
+    display: inline;
+}

@@ -20,10 +20,10 @@
                             {% for i in range(5) %}
                                 {% if i < stats.average_rating|int %}
                                     <i class="bi bi-star-fill"></i>
-                                {% elif i < stats.average_rating %}
-                                    <i class="bi bi-star-half"></i>
+                                {% elif i == stats.average_rating|int and stats.average_rating % 1 > 0 %}
+                                    <i class="bi bi-star-half text-warning"></i>
                                 {% else %}
-                                    <i class="bi bi-star"></i>
+                                    <i class="bi bi-star text-warning"></i>
                                 {% endif %}
                             {% endfor %}
                         </div>
@@ -33,35 +33,35 @@
                         <div class="mb-2">
                             <span class="me-2">5 <i class="bi bi-star-fill text-warning"></i></span>
                             <div class="progress d-inline-block" style="width: 60%; height: 20px;">
-                                <div class="progress-bar bg-warning" style="width: {{ (stats.five_star / stats.total_reviews * 100)|int }}%"></div>
+                                <div class="progress-bar bg-warning" style="width: '{{ (stats.five_star / stats.total_reviews * 100)|int }}%'"></div>
                             </div>
                             <span class="ms-2">{{ stats.five_star }}</span>
                         </div>
                         <div class="mb-2">
                             <span class="me-2">4 <i class="bi bi-star-fill text-warning"></i></span>
                             <div class="progress d-inline-block" style="width: 60%; height: 20px;">
-                                <div class="progress-bar bg-warning" style="width: {{ (stats.four_star / stats.total_reviews * 100)|int }}%"></div>
+                                <div class="progress-bar bg-warning" style="width: '{{ (stats.four_star / stats.total_reviews * 100)|int }}%'"></div>
                             </div>
                             <span class="ms-2">{{ stats.four_star }}</span>
                         </div>
                         <div class="mb-2">
                             <span class="me-2">3 <i class="bi bi-star-fill text-warning"></i></span>
                             <div class="progress d-inline-block" style="width: 60%; height: 20px;">
-                                <div class="progress-bar bg-warning" style="width: {{ (stats.three_star / stats.total_reviews * 100)|int }}%"></div>
+                                <div class="progress-bar bg-warning" style="width: '{{ (stats.three_star / stats.total_reviews * 100)|int }}%'"></div>
                             </div>
                             <span class="ms-2">{{ stats.three_star }}</span>
                         </div>
                         <div class="mb-2">
                             <span class="me-2">2 <i class="bi bi-star-fill text-warning"></i></span>
                             <div class="progress d-inline-block" style="width: 60%; height: 20px;">
-                                <div class="progress-bar bg-warning" style="width: {{ (stats.two_star / stats.total_reviews * 100)|int }}%</div>
+                                <div class="progress-bar bg-warning" style="width: '{{ (stats.two_star / stats.total_reviews * 100)|int }}%'"></div>
                             </div>
                             <span class="ms-2">{{ stats.two_star }}</span>
                         </div>
                         <div class="mb-2">
                             <span class="me-2">1 <i class="bi bi-star-fill text-warning"></i></span>
                             <div class="progress d-inline-block" style="width: 60%; height: 20px;">
-                                <div class="progress-bar bg-warning" style="width: {{ (stats.one_star / stats.total_reviews * 100)|int }}%"></div>
+                                <div class="progress-bar bg-warning" style="width: '{{ (stats.one_star / stats.total_reviews * 100)|int }}%'"></div>
                             </div>
                             <span class="ms-2">{{ stats.one_star }}</span>
                         </div>

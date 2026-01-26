@@ -43,7 +43,22 @@ function toggleDropdown(event) {
     const dropdown = document.getElementById('adminDropdown');
     const toggle = event.target.closest('.dropdown-toggle');
     
-    if (toggle) {
+    // Close all other dropdowns first
+    const allDropdowns = document.querySelectorAll('.dropdown-menu');
+    allDropdowns.forEach(menu => {
+        if (menu !== dropdown) {
+            menu.classList.remove('show');
+        }
+    });
+    const allToggles = document.querySelectorAll('.dropdown-toggle');
+    allToggles.forEach(t => {
+        if (t !== toggle) {
+            t.classList.remove('active');
+        }
+    });
+    
+    // Toggle the clicked dropdown
+    if (toggle && dropdown) {
         toggle.classList.toggle('active');
         dropdown.classList.toggle('show');
     }
@@ -53,12 +68,17 @@ function toggleDropdown(event) {
 /**
  * Close dropdowns when clicking outside
  */
-window.addEventListener('click', function(event) {
-    if (!event.target.matches('.dropdown-toggle')) {
-        const dropdowns = document.getElementsByClassName('dropdown-menu');
-        for (let i = 0; i < dropdowns.length; i++) {
-            dropdowns[i].style.display = 'none';
-        }
+document.addEventListener('click', function(event) {
+    // Check if click is outside all dropdowns and toggles
+    const isDropdownToggle = event.target.closest('.dropdown-toggle');
+    const isDropdownMenu = event.target.closest('.dropdown-menu');
+    
+    if (!isDropdownToggle && !isDropdownMenu) {
+        // Close all dropdowns
+        const dropdowns = document.querySelectorAll('.dropdown-menu');
+        dropdowns.forEach(menu => menu.classList.remove('show'));
+        const toggles = document.querySelectorAll('.dropdown-toggle');
+        toggles.forEach(toggle => toggle.classList.remove('active'));
     }
 });
 

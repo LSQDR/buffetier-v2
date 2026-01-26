@@ -233,7 +233,7 @@
     color: #f97316;
 }
 
-/* Responsive */
+
 @media (max-width: 768px) {
     .footer-content {
         grid-template-columns: 1fr;

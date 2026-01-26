@@ -21,8 +21,8 @@ admin_bp = Blueprint('admin', __name__)
 @admin_required
 def admin_dashboard():
     """Admin dashboard showing all orders and stats"""
-    orders = neon_db.get_all_orders_admin()
-    stats = neon_db.get_order_stats()
+    orders = neon_db.get_all_orders_admin()  # Fetch all orders
+    stats = neon_db.get_order_stats()  # Fetch order statistics
     return render_template('admin/dashboard.html', orders=orders, stats=stats)
 
 
@@ -35,13 +35,13 @@ def admin_dashboard():
 def update_order_status_route(order_id):
     """Update order status and send email notification"""
     try:
-        new_status = request.form.get('status')
+        new_status = request.form.get('status')  # Get new status from form
         
-        if neon_db.update_order_status(order_id, new_status):
+        if neon_db.update_order_status(order_id, new_status):  # Update order status
             try:
-                order = neon_db.get_order_by_id(order_id)
+                order = neon_db.get_order_by_id(order_id)  # Retrieve order details
                 if order:
-                    user = neon_db.get_user_by_id(order['user_id'])
+                    user = neon_db.get_user_by_id(order['user_id'])  # Get customer info
                     if user:
                         email_sent = send_order_status_update(
                             to_email=user['email'],
@@ -89,7 +89,7 @@ def delete_order_route(order_id):
 @admin_required
 def admin_menu():
     """Admin menu management page"""
-    menu_items = mongo_db.get_all_menu_items()
+    menu_items = mongo_db.get_all_menu_items()  # Fetch all menu items from MongoDB
     return render_template('admin/menu.html', menu_items=menu_items)
 
 
@@ -97,13 +97,13 @@ def admin_menu():
 @admin_required
 def create_menu_item_route():
     """Create new menu item"""
-    mongo_db.create_menu_item(
+    mongo_db.create_menu_item(  # Insert new item into MongoDB
         item_id=request.form.get('item_id'),
         name=request.form.get('name'),
         category=request.form.get('category'),
         description=request.form.get('description'),
-        price=float(request.form.get('price')),
-        available=request.form.get('available') == 'on',
+        price=float(request.form.get('price')),  # Convert price to float
+        available=request.form.get('available') == 'on',  # Convert checkbox to boolean
         image_url=request.form.get('image_url', '')
     )
     flash('Menu item created', 'success')
@@ -145,8 +145,8 @@ def delete_menu_item_route(item_id):
 @admin_required
 def admin_reviews():
     """Admin reviews management page"""
-    reviews = mongo_db.get_all_reviews()
-    stats = mongo_db.get_review_stats()
+    reviews = mongo_db.get_all_reviews()  # Fetch all reviews
+    stats = mongo_db.get_review_stats()  # Fetch review statistics
     return render_template('admin/reviews.html', reviews=reviews, stats=stats)
 
 
@@ -168,15 +168,15 @@ def delete_review_route(review_id):
 def upload_image():
     """Upload menu item image to Cloud Storage"""
     try:
-        if 'image' not in request.files:
+        if 'image' not in request.files:  # Validate file exists
             return jsonify({'error': 'No image file provided'}), 400
         
         file = request.files['image']
         
-        if file.filename == '':
+        if file.filename == '':  # Validate filename not empty
             return jsonify({'error': 'No file selected'}), 400
         
-        image_url = upload_menu_image(file)
+        image_url = upload_menu_image(file)  # Upload to cloud storage
         
         return jsonify({
             'success': True,
@@ -194,13 +194,13 @@ def upload_image():
 def delete_image():
     """Delete image from Cloud Storage"""
     try:
-        data = request.get_json()
+        data = request.get_json()  # Parse JSON payload
         image_url = data.get('image_url')
         
-        if not image_url:
+        if not image_url:  # Validate URL provided
             return jsonify({'error': 'No image URL provided'}), 400
         
-        success = delete_menu_image(image_url)
+        success = delete_menu_image(image_url)  # Delete from cloud storage
         
         if success:
             return jsonify({'success': True}), 200
