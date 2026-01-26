@@ -123,7 +123,7 @@ def delete_menu_item(item_id):
 def get_all_reviews():
     """Retrieve all reviews sorted by newest first"""
     try:
-        reviews = list(reviews_collection.find().sort('created_at', -1))
+        reviews = list(reviews_collection.find().sort('created_at', -1))  # Sort descending
         print(f"✓ Retrieved {len(reviews)} reviews from MongoDB")
         return reviews
     except Exception as e:
@@ -161,8 +161,6 @@ def create_review(user_id, user_name, rating, comment):
             'rating': int(rating),
             'comment': comment,
             'created_at': datetime.now(timezone.utc)
-
-
         }
         
         result = reviews_collection.insert_one(review_data)
@@ -187,7 +185,7 @@ def delete_review(review_id):
 def get_review_stats():
     """Get review statistics"""
     try:
-        pipeline = [
+        pipeline = [  # Aggregation pipeline
             {
                 '$group': {
                     '_id': None,

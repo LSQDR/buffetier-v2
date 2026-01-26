@@ -70,9 +70,9 @@ def checkout():
             )
             
             if email_sent:
-                print(f"✓ Confirmation email sent to {user['email']}")
+                print(f" Confirmation email sent to {user['email']}")
             else:
-                print(f"⚠ Email send failed for order #{order_id}")
+                print(f" Email send failed for order #{order_id}")
         
         # Clear cart
         session['cart'] = {}

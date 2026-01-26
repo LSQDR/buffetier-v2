@@ -35,7 +35,7 @@ def test_process_order_missing_data():
     """Test that function rejects incomplete data"""
     response = requests.post(PROCESS_ORDER_URL, json={
         'user_id': 1
-        # Missing items and total_price
+        
     })
     
     assert response.status_code == 400
@@ -48,7 +48,7 @@ def test_process_order_empty_items():
     response = requests.post(PROCESS_ORDER_URL, json={
         'user_id': 1,
         'total_price': 10.00,
-        'items': []  # Empty list
+        'items': []  
     })
     
     assert response.status_code == 400

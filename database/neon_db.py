@@ -141,7 +141,7 @@ def create_order(user_id, items, total_amount, table_number=None):
         conn = get_neon_connection()
         cur = conn.cursor()
         
-        # Insert order (use total_price not total_amount)
+        # Insert order use total_price not total_amount
         cur.execute("""
             INSERT INTO orders (user_id, table_number, total_price, status)
             VALUES (%s, %s, %s, 'pending')
@@ -304,7 +304,6 @@ def get_order_by_id(order_id):
         print(f"Error fetching order: {e}")
         return None
 
-# Add these to the bottom of neon_db.py
 
 def get_all_orders_admin():
     """Get all orders with stats (alias for get_all_orders)"""

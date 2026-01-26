@@ -46,7 +46,7 @@ NAVBAR
     background: rgba(249, 115, 22, 0.08);
 }
 
-/* Cart with badge */
+
 .cart-link {
     position: relative;
     padding: 8px 14px;
@@ -70,7 +70,7 @@ NAVBAR
     box-shadow: 0 2px 6px rgba(225, 29, 72, 0.4);
 }
 
-/* Modern dropdown */
+
 .dropdown {
     position: relative;
 }
@@ -144,9 +144,7 @@ NAVBAR
     border-bottom: none;
 }
 
-/* ============================================
-   MOBILE MENU
-   ============================================ */
+
 @media (max-width: 768px) {
     .navbar {
         padding: 12px 20px;

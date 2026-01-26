@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken  // ← Add this
+                    'X-CSRFToken': csrfToken 
                 },
                 body: JSON.stringify({
                     rating: parseInt(rating),

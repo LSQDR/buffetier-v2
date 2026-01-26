@@ -111,7 +111,7 @@ function hideElement(id) {
 }
 
 /**
- * Show notification (uses your existing toast style)
+ * Show notification
  */
 function showNotification(message, type) {
     const toast = document.createElement('div');

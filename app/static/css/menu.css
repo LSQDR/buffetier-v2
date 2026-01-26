@@ -44,7 +44,7 @@
     transform: scale(1.05);
 }
 
-/* Category tag overlay on image */
+
 .category-tag {
     position: absolute;
     top: 12px;
@@ -61,7 +61,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Content area below image */
+
 .menu-item-content {
     padding: 20px;
     display: flex;
@@ -152,9 +152,7 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* ============================================
-   RESPONSIVE MENU
-   ============================================ */
+
 @media (max-width: 768px) {
     .menu-grid {
         grid-template-columns: 1fr;

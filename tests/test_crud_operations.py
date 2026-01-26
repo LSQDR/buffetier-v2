@@ -9,9 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from database.neon_db import (
-    get_neon_connection,
     create_order,
-    get_all_orders,
     get_user_orders,
     update_order_status,
     delete_order_with_items
