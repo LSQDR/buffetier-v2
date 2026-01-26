@@ -16,20 +16,229 @@ body {
     min-height: 100vh;
 }
 
-
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    flex: 1; 
+    flex: 1;
 }
 
+/* ============================================
+   SPLIT HERO LAYOUT
+   ============================================ */
+
+.hero-split {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    background: #d16c6c;
+    padding: 3rem;
+    align-items: stretch;
+}
+
+.hero-left,
+.hero-right {
+    background: #ffffff;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+}
+
+.hero-left {
+    border-radius: 12px 0 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+}
+
+.hero-right {
+    border-radius: 0 12px 12px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Left side copy */
+
+.hero-copy {
+    max-width: 420px;
+}
+
+.hero-title {
+    font-size: clamp(2.4rem, 3vw, 3rem);
+    line-height: 1.1;
+    color: #111827;
+    margin-bottom: 1.5rem;
+    position: relative;
+    font-weight: 800;
+}
+
+
+.hero-subtitle {
+    font-size: 0.98rem;
+    color: #4b5563;
+    margin-bottom: 2rem;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+/* Right side image + nav */
+
+.hero-image-wrapper {
+    position: absolute;
+    inset: 0;
+}
+
+.hero-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-nav {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    gap: 1.75rem;
+    justify-content: flex-end;
+    padding: 1.75rem 2rem 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.hero-nav a {
+    color: #f9fafb;
+    text-decoration: none;
+}
+
+.hero-nav a:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.8rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 1px solid transparent;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn-primary {
+    background: #111827;
+    border-color: #111827;
+    color: #ffffff;
+}
+
+.btn-primary:hover {
+    background: #020617;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    border-color: #6b7280;
+    color: #ffffff;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
+
+.btn-ghost {
+    background: transparent;
+    border-color: #d1d5db;
+    color: #4b5563;
+}
+
+.btn-ghost:hover {
+    background: #f3f4f6;
+}
 
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
+
+@media (max-width: 900px) {
+    .hero-split {
+        grid-template-columns: 1fr;
+        padding: 1.5rem 1rem;
+    }
+
+    .hero-left {
+        border-radius: 12px 12px 0 0;
+        padding: 2.25rem 1.5rem;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+    }
+
+    .hero-right {
+        border-radius: 0 0 12px 12px;
+        min-height: 240px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+    }
+
+    .hero-title {
+        font-size: 2rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.95rem;
+    }
+
+    .hero-actions {
+        justify-content: flex-start;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .hero-nav {
+        justify-content: center;
+        padding: 1rem 1.25rem 0;
+        gap: 1rem;
+        font-size: 0.7rem;
+    }
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;
+    }
+}
+
+@media (max-width: 520px) {
+    .hero-split {
+        padding: 1rem 0.75rem;
+    }
+
+    .hero-left {
+        padding: 1.75rem 1.25rem;
+    }
+
+    .hero-title {
+        font-size: 1.7rem;
+    }
+
+    .hero-highlight-word::before {
+        inset: -0.2em -0.3em;
+    }
+
+    .hero-nav {
+        flex-wrap: wrap;
     }
 }

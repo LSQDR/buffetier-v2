@@ -1,4 +1,43 @@
 /* ============================================
    REVIEWS STYLES
    ============================================ */
-/* Add review-specific styles here */
+
+   .reviews-wrapper {
+    min-height: calc(100vh - 200px);
+    display: flex;
+    flex-direction: column;
+}
+
+   #reviews-container {
+      padding: 0;
+   }
+
+.footer {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-top: auto;
+}
+
+.star-rating {
+    font-size: 2.5rem;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.star-rating i {
+    color: #ddd;
+    transition: color 0.2s;
+    margin-right: 8px;
+}
+
+.star-rating i:hover,
+.star-rating i.hover {
+    color: #ffc107;
+}
+
+.star-rating i.selected {
+    color: #ffc107;
+}

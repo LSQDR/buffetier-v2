@@ -1,101 +1,168 @@
 /* ============================================
-   NAVIGATION BAR
-   ============================================ */
+NAVBAR
+============================================ */
 .navbar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 15px 30px;
-    color: white;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    padding: 12px 30px;
+    color: #2c3e50;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 30px;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
-.navbar h2 {
-    margin: 0;
+.navbar-brand {
+    font-size: 1.6rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-decoration: none;
 }
 
 .navbar-links {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
 }
 
 .navbar-links a {
-    color: white;
+    color: #4b5563;
     text-decoration: none;
-    padding: 8px 15px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
-    transition: background 0.3s;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.92rem;
+    transition: all 0.2s ease;
 }
 
 .navbar-links a:hover {
-    background: rgba(255, 255, 255, 0.3);
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.08);
+}
+
+/* Cart with badge */
+.cart-link {
+    position: relative;
+    padding: 8px 14px;
+    border-radius: 8px;
 }
 
 .cart-badge {
-    background: #e74c3c;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 12px;
-    margin-left: 5px;
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    background: #e11d48;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(225, 29, 72, 0.4);
 }
 
-/* Dropdown menu styles */
+/* Modern dropdown */
 .dropdown {
     position: relative;
-    display: inline-block;
 }
 
 .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: 500;
+    color: #4b5563;
+    transition: all 0.2s ease;
 }
 
-.dropdown-menu {
-    display: none;
-    position: absolute;
-    background-color: #2c3e50;
-    min-width: 180px;
-    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
-    z-index: 1;
-    border-radius: 4px;
-    margin-top: 5px;
-}
-
-.dropdown-menu a {
-    color: white;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    border-bottom: 1px solid #34495e;
-}
-
-.dropdown-menu a:hover {
-    background-color: #34495e;
-}
-
-.dropdown:hover .dropdown-menu {
-    display: block;
+.dropdown-toggle:hover {
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.08);
 }
 
 .dropdown-toggle::after {
-    content: ' ▼';
-    font-size: 0.8em;
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.dropdown-toggle.active::after {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: white;
+    min-width: 180px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-menu a {
+    color: #4b5563;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    border-bottom: 1px solid #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+    background: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+}
+
+.dropdown-menu a:last-child {
+    border-bottom: none;
 }
 
 /* ============================================
-   RESPONSIVE NAVBAR
+   MOBILE MENU
    ============================================ */
 @media (max-width: 768px) {
     .navbar {
-        flex-direction: column;
-        text-align: center;
+        padding: 12px 20px;
     }
-
+    
+    .navbar-brand {
+        font-size: 1.4rem;
+    }
+    
     .navbar-links {
-        margin-top: 10px;
-        flex-wrap: wrap;
-        justify-content: center;
+        gap: 4px;
+    }
+    
+    .navbar-links a,
+    .dropdown-toggle {
+        padding: 6px 10px;
+        font-size: 0.85rem;
     }
 }

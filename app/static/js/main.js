@@ -19,7 +19,7 @@ function updateCartCount() {
                 cartBadge.textContent = data.count || 0;
                 // Show or hide badge based on count
                 if (data.count > 0) {
-                    cartBadge.style.display = 'inline-block';
+                    cartBadge.style.display = 'flex';
                 } else {
                     cartBadge.style.display = 'none';
                 }
@@ -38,11 +38,17 @@ function updateCartCount() {
  */
 function toggleDropdown(event) {
     event.preventDefault();
+    event.stopPropagation();
+    
     const dropdown = document.getElementById('adminDropdown');
-    if (dropdown) {
-        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    const toggle = event.target.closest('.dropdown-toggle');
+    
+    if (toggle) {
+        toggle.classList.toggle('active');
+        dropdown.classList.toggle('show');
     }
 }
+
 
 /**
  * Close dropdowns when clicking outside

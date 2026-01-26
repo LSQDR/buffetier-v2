@@ -17,22 +17,42 @@
 <div class="menu-grid">
     {% for item in items %}
     <div class="menu-item" data-category="{{ item.category.lower() }}">
-        <span class="category-tag">{{ item.category }}</span>
-        <h3>{{ item.name }}</h3>
-        <p class="description">{{ item.description }}</p>
-        <div class="price">£{{ "%.2f"|format(item.price) }}</div>
-        
-        {% if session.get('user_id') %}
-        <button class="btn btn-success" style="width: 100%;" 
-                onclick="addToCart('{{ item.item_id }}', '{{ item.name }}', '{{ item.price }}')">
-            Add to Cart
-        </button>
+        <div class="menu-item-image">
+            {% if item.image_url %}
+                <img src="{{ item.image_url }}" alt="{{ item.name }}" loading="lazy">
+            {% else %}
+                <div class="placeholder-image">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                        <path d="M9 10l.01 0"></path>
+                        <path d="M15 10l.01 0"></path>
+                        <path d="M9.5 15a3.5 3.5 0 0 0 5 0"></path>
+                        <path d="M12 3v4"></path>
+                        <circle cx="12" cy="18" r="1"></circle>
+                    </svg>
+                    <span>No Image</span>
+                </div>
+            {% endif %}
+            <span class="category-tag">{{ item.category }}</span>
+        </div>
 
-        {% else %}
-        <button class="btn" style="width: 100%;" onclick="location.href='/login'">
-            Login to Order
-        </button>
-        {% endif %}
+        
+        <div class="menu-item-content">
+            <h3>{{ item.name }}</h3>
+            <p class="description">{{ item.description }}</p>
+            <div class="price">£{{ "%.2f"|format(item.price) }}</div>
+            
+            {% if session.get('user_id') %}
+            <button class="btn btn-primary" 
+                    onclick="addToCart('{{ item.item_id }}', '{{ item.name }}', '{{ item.price }}')">
+                Add to Cart
+            </button>
+            {% else %}
+            <button class="btn btn-ghost" onclick="location.href='/login'">
+                Login to Order
+            </button>
+            {% endif %}
+        </div>
     </div>
     {% endfor %}
 </div>

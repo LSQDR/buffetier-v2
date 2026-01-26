@@ -5,29 +5,38 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<div class="auth-container">
-    <div class="card" style="max-width: 800px; margin: 0 auto;">
-        <h1 style="text-align: center; color: #2c3e50;">🍽️ Welcome to Buffetier</h1>
-        <p style="text-align: center; font-size: 18px; color: #7f8c8d; margin: 20px 0;">
-            Your all-you-can-eat restaurant ordering system
-        </p>
-        
-        <div style="text-align: center; margin-top: 30px;">
-            <a href="/menu" class="btn">View Menu</a>
-            <a href="/register" class="btn">Register</a>
-            <a href="/login" class="btn">Login</a>
-        </div>
-        
-        <div style="margin-top: 40px; padding: 20px; background-color: #ecf0f1; border-radius: 5px;">
-            <h3>Features:</h3>
-            <ul style="margin-left: 20px; margin-top: 10px;">
-                <li>Browse our extensive buffet menu</li>
-                <li>Place orders online with ease</li>
-                <li>Track your order status in real-time</li>
-                <li>Dual database system (SQL + NoSQL)</li>
-                <li>Secure user authentication</li>
-            </ul>
-        </div>
+<section class="hero hero-split">
+  <div class="hero-left">
+    <div class="hero-copy">
+      <h1 class="hero-title">
+        Welcome to Buffetier
+      </h1>
+      <p class="hero-subtitle">
+        A modern all‑you‑can‑eat experience to browse the menu, order, and track your meal in one place.
+      </p>
+      <!-- original buttons/links -->
+      <div class="hero-actions">
+        <a href="/menu" class="btn btn-primary">View Menu</a>
+        <a href="/register" class="btn btn-secondary">Register</a>
+        <a href="/login" class="btn btn-ghost">Login</a>
+      </div>
     </div>
-</div>
+  </div>
+
+  <div class="hero-right">
+    <div class="hero-image-wrapper">
+      <img
+        src="{{ url_for('static', filename='images/hero-dish.jpg') }}"
+        alt="Buffetier dish"
+        class="hero-image"
+      >
+    </div>
+
+    <nav class="hero-nav">
+      <a href="/menu">Menu</a>
+      <a href="/reviews">Reviews</a>
+      <a href="/location">Contact</a>
+    </nav>
+  </div>
+</section>
 {% endblock %}

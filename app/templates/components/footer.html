@@ -1,32 +1,72 @@
-<!-- Footer Component -->
-<footer class="footer mt-5 py-4 bg-light">
+<!-- Modern Footer -->
+<footer class="footer">
     <div class="container">
-        <div class="row">
-            <div class="col-md-4">
-                <h5>🍽️ Buffetier</h5>
-                <p class="text-muted">Delicious food, delivered to your table.</p>
+        <div class="footer-content">
+            <!-- Brand & Description -->
+            <div class="footer-brand">
+                <a href="{{ url_for('main.index') }}" class="navbar-brand">
+                    <span>🍽️ Buffetier</span>
+                </a>
+                <p class="footer-desc">
+                    Your all-you-can-eat restaurant ordering system. 
+                    Browse, order, and enjoy with our modern cloud platform.
+                </p>
+                <div class="footer-social">
+                    <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                </div>
             </div>
-            <div class="col-md-4">
-                <h6>Quick Links</h6>
-                <ul class="list-unstyled">
-                    <li><a href="{{ url_for('main.menu') }}" class="text-muted text-decoration-none">Menu</a></li>
-                    <li><a href="{{ url_for('main.location') }}" class="text-muted text-decoration-none">Location</a></li>
-                    <li><a href="{{ url_for('reviews.reviews_page') }}" class="text-muted text-decoration-none">Reviews</a></li>
+
+            <!-- Quick Links -->
+            <div class="footer-section">
+                <h5>Quick Links</h5>
+                <ul>
+                    <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                    <li><a href="{{ url_for('main.menu') }}">Menu</a></li>
+                    <li><a href="{{ url_for('main.location') }}">Location</a></li>
+                    <li><a href="{{ url_for('reviews.reviews_page') }}">Reviews</a></li>
                 </ul>
             </div>
-            <div class="col-md-4">
-                <h6>Contact</h6>
-                <p class="text-muted mb-1">
-                    <i class="bi bi-telephone"></i> +44 1962 123456
-                </p>
-                <p class="text-muted">
-                    <i class="bi bi-geo-alt"></i> Winchester, UK
-                </p>
+
+            <!-- User Links -->
+            {% if session.get('user_id') %}
+            <div class="footer-section">
+                <h5>Account</h5>
+                <ul>
+                    <li><a href="{{ url_for('orders.cart') }}">Cart</a></li>
+                    <li><a href="{{ url_for('orders.dashboard') }}">Dashboard</a></li>
+                    <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+                </ul>
+            </div>
+            {% else %}
+            <div class="footer-section">
+                <h5>Get Started</h5>
+                <ul>
+                    <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                    <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Contact Info -->
+            <div class="footer-section">
+                <h5>Contact</h5>
+                <ul>
+                    <li><i class="bi bi-geo-alt"></i> Winchester, UK</li>
+                    <li><i class="bi bi-telephone"></i> +44 1962 123456</li>
+                    <li><i class="bi bi-envelope"></i> hello@buffetier.com</li>
+                    <li><i class="bi bi-clock"></i> Open 11AM - 10PM</li>
+                </ul>
             </div>
         </div>
-        <hr>
-        <div class="text-center text-muted">
-            <small>&copy; 2026 Buffetier. All rights reserved.</small>
+
+        <!-- Bottom Bar -->
+        <div class="footer-bottom">
+            <p>&copy; 2026 Buffetier. All rights reserved. | 
+               <a href="#">Privacy Policy</a> | 
+               <a href="#">Terms of Service</a>
+            </p>
         </div>
     </div>
 </footer>
