@@ -159,7 +159,7 @@ def send_order_status_update(to_email, user_name, order_id, new_status):
                     <p><strong>New Status:</strong> <span style="color: #667eea; font-weight: bold;">
                        {new_status.upper()}</span></p>
                     <p style="margin-top: 30px;">
-                        <a href="http://localhost:8080/dashboard" 
+                        <a href="https://sys-dev-485117.ew.r.appspot.com/dashboard" 
                            style="background: #667eea; color: white; padding: 12px 24px; 
                                   text-decoration: none; border-radius: 5px; display: inline-block;">
                             View Order Details

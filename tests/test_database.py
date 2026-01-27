@@ -95,7 +95,7 @@ class TestMongoDatabase:
     
     def test_get_menu_by_category(self):
         """Test fetching menu items by category"""
-        category = "Buffet"
+        category = "Mains"
         items = list(mongo_db.menu_collection.find({'category': category}))
         
         assert len(items) > 0
