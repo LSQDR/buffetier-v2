@@ -1,160 +1,75 @@
-# Buffetier - Cloud-Based Restaurant Ordering System
+# Buffetier
 
-A modern, full-stack restaurant ordering application built with Flask and deployed on Google Cloud Platform. Features real-time order management, menu administration, customer reviews, and secure payment processing.
+Restaurant ordering app. A customer registers, browses the menu, checks out, and can leave a review. An admin account can update order status and edit the menu.
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.1.2-green.svg)](https://flask.palletsprojects.com/)
-[![GCP](https://img.shields.io/badge/GCP-App%20Engine-orange.svg)](https://cloud.google.com/appengine)
+There is no public demo.
 
-##  Project Overview
+Checkout stores an order and can send a confirmation email. It does not take payment.
 
-Buffetier is a cloud-native restaurant ordering system that demonstrates enterprise-level architecture using:
-- **Microservices**: Serverless Cloud Functions for scalable operations
-- **Dual Databases**: PostgreSQL for transactional data, MongoDB for flexible content
-- **Cloud Storage**: Image hosting for menu items
-- **Security**: RBAC, CSRF protection, rate limiting, input validation
-- **Email Notifications**: SendGrid integration for order confirmations
+## Contents
 
----
+- [Stack](#stack)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Database setup](#database-setup)
+- [Run locally](#run-locally)
+- [Tests](#tests)
+- [Deployment](#deployment)
+- [Security](#security)
+- [Project structure](#project-structure)
 
-##  Table of Contents
+## Stack
 
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Technology Stack](#-technology-stack)
-- [Prerequisites](#-prerequisites)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Database Setup](#-database-setup)
-- [Deployment](#-deployment)
-- [API Documentation](#-api-documentation)
-- [Testing](#-testing)
-- [Security Features](#-security-features)
-- [Project Structure](#-project-structure)
+What the tree actually uses:
 
----
+- Python, Flask 3.1.2, Jinja templates
+- Bootstrap 5.3.2 and a few vanilla JavaScript files under `app/static/js/`
+- PostgreSQL through `psycopg2` in `database/neon_db.py` (users, orders, order items)
+- MongoDB through `pymongo` in `database/mongo_db.py` (database `buffetier`, collections `menu` and `reviews`)
+- Flask-WTF for CSRF, Flask-Limiter for rate limits
+- SendGrid in `utils/email.py`, called when Secret Manager has `sendgrid-api-key`
+- Google Cloud Storage helper in `utils/cloud_storage.py` and Secret Manager helper in `utils/secrets.py`
+- Cloud Function source under `cloud-functions/` for `get-menu`, `process-order`, and `update-order`. Those folders are source only.
 
-##  Features
+## Installation
 
-### Customer Features
--  **User Authentication** - Secure registration and login with password hashing
--  **Menu Browser** - View categorized menu items with images and descriptions
--  **Shopping Cart** - Add, update, remove items with real-time total calculation
--  **Order Tracking** - Monitor order status from pending to completed
--  **Reviews System** - Submit ratings (1-5 stars) and written reviews
--  **Email Notifications** - Order confirmations and status updates via SendGrid
+Python 3.12.
 
-### Admin Features
--  **Dashboard** - Real-time order statistics and revenue tracking
--  **Order Management** - Update order status, delete orders
--  **Menu CRUD** - Create, read, update, delete menu items with image uploads
--  **Review Moderation** - Delete inappropriate reviews
--  **Cloud Storage** - Upload optimized menu images to Google Cloud Storage
-
-### Technical Features
--  **Serverless Functions** - 3 Cloud Functions for menu, orders, and status updates
--  **Security** - CSRF protection, rate limiting, XSS prevention, SQL injection protection
--  **Dual Database** - PostgreSQL for users/orders, MongoDB for menu/reviews
--  **Responsive UI** - Bootstrap 5 with custom styling
--  **Secret Management** - Credentials stored in Google Secret Manager
--  **Email Integration** - Professional HTML email templates
-
----
-
-##  Architecture
-
-### System Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Client (Browser)                         │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Google App Engine (Flask App)                  │
-│  ┌─────────────┬──────────────┬──────────────┬───────────┐ │
-│  │   Auth BP   │   Main BP    │  Orders BP   │ Admin BP  │ │
-│  │   Reviews   │    API BP    │   Errors BP  │           │ │
-│  └─────────────┴──────────────┴──────────────┴───────────┘ │
-└────────┬────────────┬───────────────┬──────────────┬────────┘
-         │            │               │              │
-         ▼            ▼               ▼              ▼
-┌──────────────┐ ┌─────────────┐ ┌──────────┐ ┌──────────────┐
-│   Neon DB    │ │  MongoDB    │ │  Cloud   │ │   SendGrid   │
-│ (PostgreSQL) │ │  Atlas      │ │ Storage  │ │    Email     │
-│              │ │             │ │          │ │              │
-│ • users      │ │ • menu      │ │ • images │ │ • order conf │
-│ • orders     │ │ • reviews   │ │          │ │ • status upd │
-│ • order_items│ │             │ │          │ │              │
-└──────────────┘ └─────────────┘ └──────────┘ └──────────────┘
-         ▲            ▲               ▲
-         │            │               │
-         └────────────┴───────────────┘
-                     │
-      ┌──────────────┴──────────────┐
-      │  Google Cloud Functions     │
-      │  • get-menu                 │
-      │  • process-order            │
-      │  • update-order             │
-      └─────────────────────────────┘
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Request Flow Example: Place Order
+## Configuration
 
-1. **User submits order** → Cart page
-2. **POST /checkout** → Orders Blueprint
-3. **Create order** → Neon PostgreSQL orders + order_items tables
-4. **Send email** → SendGrid API confirmation email
-5. **Clear cart** → Session management
-6. **Redirect** → User dashboard with success message
+Copy these into the environment, or into a `.env` file next to `main.py`. `python-dotenv` loads that file. `.env` is gitignored. Do not commit it.
 
----
+| Variable | Used by | Required |
+| --- | --- | --- |
+| `SECRET_KEY` | Flask session signing. `ProductionConfig` raises if this is missing. Development reads it and does not invent a key. | Yes, to sign sessions |
+| `DATABASE_URL` | Postgres URL for `database/neon_db.py` when Secret Manager is unavailable | Yes, for users and orders |
+| `MONGO_URI` | MongoDB URL for `database/mongo_db.py` when Secret Manager is unavailable | Yes, for the menu and reviews |
+| `FLASK_ENV` | `development` (default), `testing`, or `production` | No |
+| `GOOGLE_CLOUD_PROJECT` | Project id for `utils/secrets.py` | Only if you use Secret Manager |
+| `GCS_BUCKET_NAME` | Menu image bucket. Defaults to `buffetier-menu-images` | No |
+| `MONGODB_URI` | `cloud-functions/get-menu` only. The Flask app does not read this name | Only that function |
+| `PROCESS_ORDER_FUNCTION_URL`, `GET_MENU_FUNCTION_URL`, `UPDATE_ORDER_FUNCTION_URL` | `tests/test_cloud_functions.py`. Unset, those tests skip | No |
 
-##  Technology Stack
+The Flask app tries Secret Manager first, then the environment:
 
-### Backend
-- **Framework**: Flask 3.1.2
-- **Language**: Python 3.12
-- **ORM/Database Drivers**: psycopg2-binary, pymongo
-- **Authentication**: Flask-WTF (CSRF), custom decorators
-- **Rate Limiting**: Flask-Limiter
+- secret `neon-db-uri`, else `DATABASE_URL`
+- secret `mongodb-uri`, else `MONGO_URI`
+- secret `sendgrid-api-key` (no environment fallback; email is skipped if this fails)
+- secret `maps-api-key` on the location page
 
-### Databases
-- **PostgreSQL**: Neon users, orders, order_items
-- **MongoDB**: Atlas menu items, reviews
+`database/mongo_db.py` does not connect when it is imported. The first menu or review call opens MongoDB.
 
-### Cloud Services
-- **Hosting**: Google App Engine Python 3.12 runtime
-- **Functions**: Cloud Functions 
-- **Storage**: Cloud Storage 
-- **Secrets**: Secret Manager 
+## Database setup
 
-### External Services
-- **Email**: SendGrid API
-- **Maps**: Google Maps API
-
-### Security
-- **CSRF Protection**: Flask-WTF
-- **Rate Limiting**: Flask-Limiter 
-- **Input Validation**: bleach, email-validator, custom validators
-- **Password Hashing**: SHA-256
-- **XSS Prevention**: HTML sanitization
-- **SQL Injection**: Parameterized queries
-
-### Frontend
-- **UI Framework**: Bootstrap 5
-- **Icons**: Bootstrap Icons
-- **JavaScript**: Vanilla JS
-
----
-
-##  Database Setup
-
-### PostgreSQL Neon Schema
+Postgres tables used by `database/neon_db.py`:
 
 ```sql
--- Users table
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -165,7 +80,6 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Orders table
 CREATE TABLE orders (
     order_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id),
@@ -176,7 +90,6 @@ CREATE TABLE orders (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Order items table
 CREATE TABLE order_items (
     item_id SERIAL PRIMARY KEY,
     order_id INTEGER REFERENCES orders(order_id) ON DELETE CASCADE,
@@ -187,157 +100,71 @@ CREATE TABLE order_items (
 );
 ```
 
-### MongoDB Collections
+`password_hash` holds a salted PBKDF2 string, about 120 characters, which fits `VARCHAR(255)`.
 
-**Menu Collection Schema:**
-```json
-{
-  "_id": ObjectId,
-  "item_id": "string",
-  "name": "string",
-  "category": "string",
-  "description": "string",
-  "price": float,
-  "available": boolean,
-  "image_url": "string"
-}
+MongoDB database `buffetier`:
+
+Menu documents: `item_id`, `name`, `category`, `description`, `price`, `available`, `image_url`.
+
+Review documents: `user_id`, `user_name`, `rating` (1–5), `comment`, `created_at`.
+
+## Run locally
+
+```bash
+export SECRET_KEY="choose-a-long-random-string"
+export DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB"
+export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/buffetier"
+export FLASK_ENV=development
+python main.py
 ```
 
-**Reviews Collection Schema:**
-```json
-{
-  "_id": ObjectId,
-  "user_id": integer,
-  "user_name": "string",
-  "rating": integer (1-5),
-  "comment": "string",
-  "created_at": datetime
-}
+The process listens on `http://127.0.0.1:8080`. GET `/`, `/login`, and `/register` render without a database. Signing in, the menu, checkout, reviews, and admin screens need `DATABASE_URL` and `MONGO_URI`.
+
+## Tests
+
+```bash
+pytest --collect-only
+pytest -m "not live_db"
 ```
 
-##  API Documentation
+Collection and `pytest -m "not live_db"` need no `DATABASE_URL` and no `MONGO_URI`. If `SECRET_KEY` is unset, `tests/conftest.py` sets a throwaway value for the test process only. That is not a production key.
 
-See [API_DOCUMENTATION.md] for complete API reference including:
-- All REST endpoints
-- Request/response formats
-- Authentication requirements
-- Example requests with curl/Postman
+`live_db` marks tests that open Neon or MongoDB and write rows (`tests/test_database.py`, `tests/test_crud_operations.py`, `tests/test_reviews.py`, and the menu/order cases in the API, admin, and security files). Run them only against a database you are willing to change:
 
-Quick Reference:
-
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/menu` | GET | None | Get all menu items |
-| `/api/orders` | POST | Required | Create new order |
-| `/api/cart/add` | POST | Required | Add item to cart |
-| `/api/reviews/submit` | POST | Required | Submit review |
-
----
-
-##  Testing
-
-### Test Categories
-
-1. **Authentication Tests** 
-   - User registration validation
-   - Login/logout functionality
-   - Session management
-
-2. **Admin Tests** 
-   - Admin authentication
-   - Menu CRUD operations
-   - Order management
-   - Review moderation
-
-3. **API Tests** 
-   - Menu endpoints
-   - Order creation
-   - Cart operations
-
-4. **Database Tests** 
-   - Neon PostgreSQL operations
-   - MongoDB operations
-   - Connection handling
-
-5. **Security Tests** 
-   - Input validation
-   - XSS prevention
-   - SQL injection prevention
-   - CSRF protection
-   - Rate limiting
-
----
-
-##  Security Features
-
-### 1. Authentication & Authorization
-- **Password Hashing**: SHA-256 encryption
-- **Session Management**: 30-minute timeout, HTTP-only cookies
-- **Role-Based Access Control (RBAC)**: Admin vs regular users
-- **Decorators**: `@login_required`, `@admin_required`
-
-### 2. Input Validation
-- **Email**: RFC 5322 compliant validation
-- **Password**: Min 8 chars, uppercase, lowercase, digit, special char
-- **Phone**: UK format validation
-- **HTML Sanitization**: Bleach library for XSS prevention
-
-### 3. Attack Prevention
-- **CSRF Protection**: Flask-WTF tokens on all forms
-- **SQL Injection**: Parameterized queries
-- **XSS Prevention**: HTML escaping and sanitization
-- **Rate Limiting**: 5 requests/min on auth endpoints
-
-### 4. Secure Configuration
-- **Environment Variables**: Sensitive data in .env files
-- **Secret Manager**: Production credentials in GCP Secret Manager
-- **HTTPS Only**: Enforced via `secure: always` in app.yaml
-- **Security Headers**: Content-Security-Policy, X-Frame-Options
-
-### 5. Audit Logging
-- Security events logged with timestamps, user IDs, IP addresses
-- Tracks unauthorized access attempts and privilege escalation
-
----
-
-##  Project Structure
-
-```
-buffetier/
-├── app/
-│   ├── __init__.py              # App factory
-│   ├── extensions.py            # Flask extensions
-│   ├── blueprints/              # Route blueprints
-│   │   ├── main.py             # Home, menu, location
-│   │   ├── auth.py             # Login, register, logout
-│   │   ├── orders.py           # Cart, checkout, dashboard
-│   │   ├── reviews.py          # Reviews system
-│   │   ├── admin.py            # Admin panel
-│   │   ├── api.py              # REST API endpoints
-│   │   └── errors.py           # Error handlers
-│   ├── models/
-│   │   └── user.py             # User model with validation
-│   ├── templates/              # Jinja2 templates
-│   └── static/                 # CSS, JS, images
-├── database/
-│   ├── neon_db.py              # PostgreSQL operations
-│   └── mongo_db.py             # MongoDB operations
-├── utils/
-│   ├── auth.py                 # Auth decorators
-│   ├── validation.py           # Input validation
-│   ├── secrets.py              # Secret Manager helper
-│   ├── cloud_storage.py        # GCS image uploads
-│   └── email.py                # SendGrid integration
-├── cloud-functions/
-│   ├── get-menu/               # Menu retrieval function
-│   ├── process-order/          # Order creation function
-│   └── update-order/           # Status update function
-├── tests/                      # pytest test suite
-├── config.py                   # Configuration classes
-├── main.py                     # Application entry point
-├── app.yaml                    # App Engine config
-├── requirements.txt            # Python dependencies
-└── .env                        # Environment variables
+```bash
+pytest -m live_db
 ```
 
----
+`tests/test_cloud_functions.py` imports `requests` and skips unless the three function URL variables above are set. GitHub Actions (`.github/workflows/tests.yml`) installs `requirements.txt` and runs the hermetic suite on `main`.
+
+## Deployment
+
+Nothing in this repo is deployed. There is no public demo, no tracked `app.yaml`, and no screenshot. `.gitignore` ignores `app.yaml` and `.env`. Do not treat a Cloud Function folder or a Storage helper as a running service.
+
+## Security
+
+- Passwords: salted PBKDF2-HMAC-SHA256, 600,000 iterations, 16 random bytes of salt, stored as `pbkdf2_sha256$iterations$salt$hash`. A 64-character unsalted SHA-256 hex digest from older rows still verifies. Login does not rewrite that row.
+- `/cart`, `/checkout`, and `/dashboard` use `@login_required`. Admin routes use `@admin_required`.
+- CSRF tokens on forms (Flask-WTF). Auth routes are limited to 5 requests per minute.
+- Session cookie is HTTP-only, `SameSite=Lax`, and `Secure` outside development. Lifetime is 30 minutes.
+- SQL uses parameters. Registration checks email, password strength, UK phone numbers, and a short SQL-injection pattern list.
+
+This tree does not set `Content-Security-Policy` or `X-Frame-Options`, and it does not enforce HTTPS in config. Those headers are not applied by an `app.yaml` here because that file is not in the tree.
+
+## Project structure
+
+```
+app/                  Flask factory, blueprints, templates, static files
+database/neon_db.py   Postgres users and orders
+database/mongo_db.py  MongoDB menu and reviews
+utils/                auth decorators, validation, secrets, storage, email
+cloud-functions/      function source (get-menu, process-order, update-order)
+tests/                pytest suite
+config.py             development, testing, and production settings
+main.py               entry point
+requirements.txt
+pytest.ini            live_db marker
+.github/workflows/    hermetic pytest
+```
+
+Route notes are in [API_DOCUMENTATION.md](API_DOCUMENTATION.md). The production base URL in that file is not a live demo.
