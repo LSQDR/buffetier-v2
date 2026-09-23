@@ -2,6 +2,8 @@ import pytest
 import json
 from database import mongo_db
 
+pytestmark = pytest.mark.live_db
+
 
 class TestReviewSystem:
     """Test suite for Phase 4 - Review System"""

@@ -3,6 +3,8 @@ from database import neon_db, mongo_db
 import uuid
 import json
 
+pytestmark = pytest.mark.live_db
+
 
 class TestNeonDatabase:
     

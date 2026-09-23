@@ -23,16 +23,38 @@ def get_mongo_client():
     
     return MongoClient(mongo_uri)
 
-# Initialize
-try:
-    client = get_mongo_client()
-    db = client['buffetier']
-    menu_collection = db['menu']
-    reviews_collection = db['reviews']
-    print("✓ MongoDB connected successfully")
-except Exception as e:
-    print(f"✗ MongoDB connection failed: {e}")
-    raise
+
+# Connection is deferred until a collection is used. Importing this module
+# must succeed when MONGO_URI is unset and Secret Manager is unreachable.
+_client = None
+_db = None
+
+
+def _ensure_db():
+    """Open the buffetier database on first use."""
+    global _client, _db
+    if _db is None:
+        _client = get_mongo_client()
+        _db = _client['buffetier']
+        print("✓ MongoDB connected successfully")
+    return _db
+
+
+class _LazyCollection:
+    """Stand-in for a pymongo collection that connects on first attribute use."""
+
+    def __init__(self, name):
+        self._name = name
+
+    def _collection(self):
+        return _ensure_db()[self._name]
+
+    def __getattr__(self, item):
+        return getattr(self._collection(), item)
+
+
+menu_collection = _LazyCollection('menu')
+reviews_collection = _LazyCollection('reviews')
 
 
 # ============================================

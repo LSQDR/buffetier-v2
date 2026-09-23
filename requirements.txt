@@ -12,3 +12,4 @@ Flask-WTF==1.2.1
 bleach==6.1.0
 email-validator==2.1.0
 Flask-Limiter==3.5.0
+requests==2.34.2

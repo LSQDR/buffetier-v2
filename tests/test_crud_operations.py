@@ -22,6 +22,8 @@ from database.mongo_db import (
 )
 from bson import ObjectId
 
+pytestmark = pytest.mark.live_db
+
 
 def test_postgresql_create_order():
     """Test CREATE operation on orders"""

@@ -30,6 +30,7 @@ class TestAPIRoutes:
         response = client.get('/')
         assert response.status_code == 200
     
+    @pytest.mark.live_db
     def test_get_menu_api(self, client):
         """Test GET /api/menu endpoint"""
         response = client.get('/api/menu')
@@ -39,6 +40,7 @@ class TestAPIRoutes:
         assert isinstance(data, list)
         assert len(data) > 0
     
+    @pytest.mark.live_db
     def test_create_order_api(self, authenticated_client):
         """Test POST /api/orders endpoint"""
         order_data = {
@@ -64,6 +66,7 @@ class TestAPIRoutes:
         data = json.loads(response.data)
         assert 'order_id' in data
     
+    @pytest.mark.live_db
     def test_get_user_orders(self, authenticated_client):
         """Test GET /api/orders/<user_id> endpoint"""
         user_id = 1
@@ -73,6 +76,7 @@ class TestAPIRoutes:
         data = json.loads(response.data)
         assert isinstance(data, list)
     
+    @pytest.mark.live_db
     def test_update_order_status(self, authenticated_client):
         """Test PUT /api/orders/<order_id> endpoint"""
         order_data = {
@@ -116,6 +120,7 @@ class TestAPIRoutes:
         
         assert response.status_code == 400
     
+    @pytest.mark.live_db
     def test_menu_category_filter(self, client):
         """Test filtering menu by category"""
         response = client.get('/api/menu?category=Buffet')

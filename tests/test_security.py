@@ -176,6 +176,7 @@ class TestRBACEnforcement:
             assert response.status_code in [302, 308]
     
     
+    @pytest.mark.live_db
     def test_admin_users_can_access_admin_routes(self):
         """Test that admin users can access admin routes"""
         

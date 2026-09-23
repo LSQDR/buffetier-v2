@@ -50,6 +50,7 @@ def test_admin_dashboard_requires_admin(regular_session):
     assert response.status_code in [302, 308]
 
 
+@pytest.mark.live_db
 def test_admin_dashboard_accessible_by_admin(admin_session):
     """Test that admin users can access dashboard"""
     response = admin_session.get('/admin/')
@@ -62,6 +63,7 @@ def test_admin_menu_requires_admin(regular_session):
     assert response.status_code in [302, 308]
 
 
+@pytest.mark.live_db
 def test_admin_menu_accessible_by_admin(admin_session):
     """Test that admin users can access menu management"""
     response = admin_session.get('/admin/menu')
@@ -76,6 +78,7 @@ def test_update_order_status_requires_admin(regular_session):
     assert response.status_code in [302, 308]
 
 
+@pytest.mark.live_db
 def test_update_order_status_by_admin(admin_session):
     """Test updating order status as admin"""
     response = admin_session.post('/admin/order/1/update',
