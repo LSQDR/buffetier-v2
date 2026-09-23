@@ -11,7 +11,7 @@ class Config:
     """Base configuration"""
     
     # Flask
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # Session
     SESSION_COOKIE_SECURE = True  # Set True in production with HTTPS
@@ -37,11 +37,24 @@ class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
 
 
+class _RequireSecretKey:
+    """Read SECRET_KEY when the production config object is loaded."""
+
+    def __get__(self, obj, objtype=None):
+        secret = os.environ.get('SECRET_KEY')
+        if not secret:
+            raise RuntimeError(
+                'SECRET_KEY environment variable is required in production'
+            )
+        return secret
+
+
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
     SESSION_COOKIE_SECURE = True
-    
+    SECRET_KEY = _RequireSecretKey()
+
     # Production should use stricter rate limits
     RATELIMIT_DEFAULT = "100 per day, 50 per hour"
 
