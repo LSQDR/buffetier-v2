@@ -7,6 +7,54 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import os
 import hashlib
+import hmac
+
+# OWASP baseline for PBKDF2-HMAC-SHA256. Salt is 16 random bytes.
+_PBKDF2_ITERATIONS = 600_000
+
+
+def hash_password(password):
+    """Return a salted PBKDF2-HMAC-SHA256 hash. Two calls differ."""
+    salt = os.urandom(16)
+    digest = hashlib.pbkdf2_hmac(
+        'sha256',
+        password.encode('utf-8'),
+        salt,
+        _PBKDF2_ITERATIONS,
+    )
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+def verify_password(password, stored):
+    """Check a password against a salted hash, or a legacy unsalted SHA-256 digest."""
+    if not stored or not isinstance(stored, str):
+        return False
+
+    if stored.startswith('pbkdf2_sha256$'):
+        try:
+            _, iterations, salt_hex, digest_hex = stored.split('$', 3)
+            actual = hashlib.pbkdf2_hmac(
+                'sha256',
+                password.encode('utf-8'),
+                bytes.fromhex(salt_hex),
+                int(iterations),
+            )
+            expected = bytes.fromhex(digest_hex)
+        except (ValueError, TypeError):
+            return False
+        return hmac.compare_digest(actual, expected)
+
+    # Rows written before the salted hash are 64 hex characters of SHA-256.
+    if len(stored) == 64:
+        try:
+            bytes.fromhex(stored)
+        except ValueError:
+            return False
+        legacy = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        return hmac.compare_digest(legacy, stored)
+
+    return False
+
 
 def get_neon_connection():
     """
@@ -37,7 +85,7 @@ def register_user(name, email, password, phone='', is_admin=False):
         conn = get_neon_connection()
         cur = conn.cursor()
         
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        hashed_password = hash_password(password)
         
         cur.execute("""
             INSERT INTO users (name, email, phone, password_hash, is_admin)
@@ -65,19 +113,22 @@ def authenticate_user(email, password):
         conn = get_neon_connection()
         cur = conn.cursor()
         
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        
         cur.execute("""
-            SELECT user_id, name, email, phone, is_admin
+            SELECT user_id, name, email, phone, is_admin, password_hash
             FROM users
-            WHERE email = %s AND password_hash = %s
-        """, (email, hashed_password))
+            WHERE email = %s
+        """, (email,))
         
         user = cur.fetchone()
         cur.close()
         conn.close()
         
-        return dict(user) if user else None
+        if not user or not verify_password(password, user['password_hash']):
+            return None
+        
+        user = dict(user)
+        user.pop('password_hash', None)
+        return user
         
     except Exception as e:
         print(f"Error authenticating user: {e}")

@@ -6,6 +6,7 @@ Tests for input validation, RBAC enforcement, and session security.
 import pytest
 from main import app
 from database import mongo_db, neon_db
+from database.neon_db import hash_password, verify_password
 from utils.validation import (
     validate_password_strength,
     validate_email_address,
@@ -13,6 +14,25 @@ from utils.validation import (
     sanitize_html_input,
     contains_sql_injection_patterns
 )
+import hashlib
+
+
+class TestPasswordHashing:
+    """Salted password hashes do not need a database."""
+
+    def test_hash_is_salted_and_verifies(self):
+        first = hash_password("SecurePass123!")
+        second = hash_password("SecurePass123!")
+
+        assert first.startswith("pbkdf2_sha256$")
+        assert first != second
+        assert verify_password("SecurePass123!", first) is True
+        assert verify_password("WrongPass123!", first) is False
+
+    def test_legacy_unsalted_sha256_still_verifies(self):
+        legacy = hashlib.sha256(b"SecurePass123!").hexdigest()
+        assert verify_password("SecurePass123!", legacy) is True
+        assert verify_password("WrongPass123!", legacy) is False
 
 
 class TestInputValidation:
@@ -232,3 +252,15 @@ class TestSessionSecurity:
                 response = client.get(route, follow_redirects=False)
                 assert response.status_code in [302, 308], f"Route {route} should redirect"
                 assert '/login' in response.location or '/' in response.location
+
+    def test_checkout_requires_login(self):
+        """Checkout must not create an order for an anonymous session."""
+        previous = app.config.get('WTF_CSRF_ENABLED')
+        app.config['WTF_CSRF_ENABLED'] = False
+        try:
+            with app.test_client() as client:
+                response = client.post('/checkout', follow_redirects=False)
+                assert response.status_code in [302, 308]
+                assert '/login' in response.location
+        finally:
+            app.config['WTF_CSRF_ENABLED'] = previous

@@ -27,6 +27,7 @@ def cart():
 
 
 @orders_bp.route('/checkout', methods=['POST'])
+@login_required
 def checkout():
     """Process order checkout"""
     user_id = session.get('user_id')
