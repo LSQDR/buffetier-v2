@@ -17,7 +17,6 @@ Checkout stores an order and can send a confirmation email. It does not take pay
 - [Deployment](#deployment)
 - [Security](#security)
 - [Project structure](#project-structure)
-- [What I demonstrated and learned](#what-i-demonstrated-and-learned)
 
 ## Stack
 
@@ -169,17 +168,3 @@ pytest.ini            live_db marker
 ```
 
 Route notes are in [API_DOCUMENTATION.md](API_DOCUMENTATION.md). The production base URL in that file is not a live demo.
-
-## What I demonstrated and learned
-
-This was a university project. I built the ordering flow a customer uses: register, browse the menu, keep a cart, check out, and leave a review. An admin account can update an order and edit the menu.
-
-I split the Flask app into an application factory and blueprints, and rendered the pages with Jinja, Bootstrap, and a few vanilla JavaScript files for the cart and the menu.
-
-Users and orders are in Postgres on Neon. Menu items and reviews are in MongoDB. I wrote the Postgres queries with parameters. I kept the Mongo client from connecting until a menu or review call needs it, so pytest can collect the suite when `DATABASE_URL` and `MONGO_URI` are unset. Tests that open Neon or Mongo are marked `live_db`. GitHub Actions runs the others.
-
-The first passwords were an unsalted SHA-256 digest. I learned that a password hash needs a salt, so new passwords use PBKDF2-HMAC-SHA256 with a random salt. A stored 64-character digest still verifies, and login leaves that row as it is. I learned that `/checkout` should require a logged-in session, and I added `@login_required` there, the same decorator `/cart` already uses.
-
-Registration checks the email, the password strength, and a UK phone number, and strips HTML from those fields. Forms carry CSRF tokens. Auth routes are limited to 5 requests a minute. `ProductionConfig` raises when `SECRET_KEY` is missing. Checkout writes the order and can send a confirmation through SendGrid when that API key is available.
-
-The `cloud-functions/` folders, the Cloud Storage helper, and the Secret Manager helper are source in this tree. I run the app locally. Neon and Mongo are the databases it uses.
