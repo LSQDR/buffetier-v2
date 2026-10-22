@@ -3,10 +3,12 @@ Main Blueprint
 Handles home page, menu display, and general public routes.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, session
+from datetime import datetime
+
+from flask import Blueprint, flash, redirect, render_template, url_for
+
 from database import mongo_db
 from utils.secrets import get_secret
-from datetime import datetime
 
 # Create blueprint
 main_bp = Blueprint('main', __name__)
@@ -29,28 +31,28 @@ def index():
 def menu():
     """
     Display restaurant menu page with caching.
-    
+
     Fetches all menu items from MongoDB and caches them for 5 minutes
     to reduce connection latency.
     """
     global menu_cache
-    
+
     try:
         # Check if cache is valid
         now = datetime.now()
         cache_valid = (
-            menu_cache['items'] is not None and 
-            menu_cache['timestamp'] is not None and 
+            menu_cache['items'] is not None and
+            menu_cache['timestamp'] is not None and
             (now - menu_cache['timestamp']).seconds < menu_cache['ttl']
         )
-        
+
         if not cache_valid:
             items = mongo_db.get_all_menu_items()
             menu_cache['items'] = items
             menu_cache['timestamp'] = now
         else:
             items = menu_cache['items']
-        
+
         return render_template('menu/menu.html', items=items)
     except Exception as e:
         flash(f'Error loading menu: {str(e)}', 'error')

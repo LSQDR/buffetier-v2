@@ -1,7 +1,8 @@
-from pymongo import MongoClient
-from bson import ObjectId
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
+from bson import ObjectId
+from pymongo import MongoClient
 
 # ============================================
 # DATABASE SETUP
@@ -19,8 +20,8 @@ def get_mongo_client():
         print("  Falling back to environment variable")
         mongo_uri = os.getenv('MONGO_URI')
         if not mongo_uri:
-            raise Exception("MongoDB URI not found")
-    
+            raise Exception("MongoDB URI not found") from e
+
     return MongoClient(mongo_uri)
 
 
@@ -93,7 +94,7 @@ def create_menu_item(item_id, name, category, description, price, available=True
             'available': available,
             'image_url': image_url
         }
-        
+
         result = menu_collection.insert_one(item_data)
         print(f"✓ Created menu item: {name}")
         return str(result.inserted_id)
@@ -114,7 +115,7 @@ def update_menu_item(menu_id, item_id, name, category, description, price, avail
             'available': available,
             'image_url': image_url
         }
-        
+
         result = menu_collection.update_one(
             {'_id': ObjectId(menu_id)},
             {'$set': updated_data}
@@ -166,7 +167,7 @@ def get_reviews_by_user(user_id):
 def create_review(user_id, user_name, rating, comment):
     """
     Create a new review.
-    
+
     Schema:
     {
         'user_id': int,           # from Neon users table
@@ -182,9 +183,9 @@ def create_review(user_id, user_name, rating, comment):
             'user_name': user_name,
             'rating': int(rating),
             'comment': comment,
-            'created_at': datetime.now(timezone.utc)
+            'created_at': datetime.now(UTC)
         }
-        
+
         result = reviews_collection.insert_one(review_data)
         print(f"✓ Created review by {user_name} with rating {rating}")
         return str(result.inserted_id)
@@ -231,9 +232,9 @@ def get_review_stats():
                 }
             }
         ]
-        
+
         result = list(reviews_collection.aggregate(pipeline))
-        
+
         if result:
             stats = result[0]
             stats['average_rating'] = round(stats['average_rating'], 1) if stats['average_rating'] else 0

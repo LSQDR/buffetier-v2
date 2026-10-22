@@ -4,10 +4,12 @@ Uses app factory pattern for better structure.
 """
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from app import create_app
-import os
+import os  # noqa: E402
+
+from app import create_app  # noqa: E402
 
 # Create app instance
 app = create_app(os.getenv('FLASK_ENV', 'development'))

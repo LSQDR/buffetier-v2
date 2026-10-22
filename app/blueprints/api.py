@@ -3,13 +3,13 @@ API Blueprint
 RESTful API endpoints for menu, orders, and cart operations.
 """
 
-from flask import Blueprint, jsonify, request, session
-from database import neon_db, mongo_db
-from utils.auth import login_required
-from app.extensions import csrf
-from utils.cloud_storage import upload_menu_image
 import json
 
+from flask import Blueprint, jsonify, request, session
+
+from database import mongo_db, neon_db
+from utils.auth import login_required
+from utils.cloud_storage import upload_menu_image
 
 api_bp = Blueprint('api', __name__)
 
@@ -24,15 +24,15 @@ def get_menu():
     """API endpoint to get menu items"""
     try:
         category = request.args.get('category')  # Check for category filter
-        
+
         if category:
             items = list(mongo_db.menu_collection.find({'category': category}))  # Filter by category
         else:
             items = mongo_db.get_all_menu_items()  # Get all items
-        
+
         for item in items:
             item['_id'] = str(item['_id'])  # Convert MongoDB ObjectId to string
-        
+
         return jsonify(items), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -49,14 +49,14 @@ def create_order():
     """API endpoint to create a new order"""
     try:
         data = request.get_json()  # Parse JSON request body
-        
+
         if not data.get('user_id') or not data.get('items'):  # Validate required fields
             return jsonify({'error': 'Missing user_id or items'}), 400
-        
+
         user_id = data['user_id']
         table_number = data.get('table_number', 0)
         items = data['items']
-        
+
         total_price = sum(item['price'] * item['quantity'] for item in items)  # Calculate total
         order_id = neon_db.create_order(  # Save order to database
             user_id=user_id,
@@ -64,12 +64,12 @@ def create_order():
             total_amount=total_price,
             table_number=table_number
         )
-        
+
         return jsonify({
             'order_id': order_id,
             'total': total_price
         }), 201
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -80,7 +80,7 @@ def get_user_orders(user_id):
     """API endpoint to get all orders for a user"""
     try:
         orders = neon_db.get_user_orders(user_id)  # Fetch user's orders
-        
+
         orders_list = []
         for order in orders:
             orders_list.append({  # Format order data
@@ -89,7 +89,7 @@ def get_user_orders(user_id):
                 'status': order['status'],
                 'created_at': str(order['order_date'])
             })
-        
+
         return jsonify(orders_list), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -102,12 +102,12 @@ def update_order(order_id):
     try:
         data = request.get_json()  # Parse JSON request body
         status = data.get('status')  # Get new status
-        
+
         if not status:  # Validate status provided
             return jsonify({'error': 'Status required'}), 400
-        
+
         neon_db.update_order_status(order_id, status)  # Update in database
-        
+
         return jsonify({'status': 'updated', 'order_id': order_id}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -123,13 +123,13 @@ def update_order(order_id):
 def add_to_cart():
     """API endpoint to add item to shopping cart"""
     data = request.get_json()  # Parse JSON request
-    
+
     if 'cart' not in session:  # Initialize cart if needed
         session['cart'] = {}
-    
+
     cart = session['cart']
     item_id = str(data.get('item_id'))
-    
+
     if item_id in cart:
         cart[item_id]['quantity'] += 1  # Increment quantity if exists
     else:
@@ -139,10 +139,10 @@ def add_to_cart():
             'price': float(data.get('price')),
             'quantity': int(data.get('quantity', 1))
         }
-    
+
     session['cart'] = cart
     session.modified = True  # Mark session as modified
-    
+
     return jsonify({'success': True, 'cart_count': len(cart)}), 200
 
 
@@ -151,7 +151,7 @@ def cart_count():
     """API endpoint to get cart item count"""
     if 'cart' not in session:  # Return 0 if cart doesn't exist
         return jsonify({'count': 0}), 200
-    
+
     total_items = sum(item['quantity'] for item in session['cart'].values())  # Sum all quantities
     return jsonify({'count': total_items}), 200
 
@@ -174,7 +174,7 @@ def update_cart():
     data = request.get_json()  # Parse JSON request
     item_id = str(data.get('item_id'))
     quantity = int(data.get('quantity'))
-    
+
     if 'cart' in session and item_id in session['cart']:  # Check if item exists in cart
         if quantity > 0:
             session['cart'][item_id]['quantity'] = quantity  # Update quantity
@@ -182,7 +182,7 @@ def update_cart():
             del session['cart'][item_id]  # Delete if quantity is 0 or less
         session.modified = True  # Mark session as modified
         return jsonify({'success': True}), 200
-    
+
     return jsonify({'success': False}), 400
 
 
@@ -206,23 +206,23 @@ def upload_image():
     try:
         if not session.get('is_admin'):  # Verify admin access
             return jsonify({'success': False, 'error': 'Admin access required'}), 403
-        
+
         if 'image' not in request.files:  # Validate file exists
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
-        
+
         file = request.files['image']
-        
+
         if file.filename == '':  # Validate filename not empty
             return jsonify({'success': False, 'error': 'No file selected'}), 400
-        
+
         public_url = upload_menu_image(file)  # Upload to cloud storage
-        
+
         return jsonify({
             'success': True,
             'url': public_url,
             'message': 'Image uploaded successfully'
         }), 200
-        
+
     except ValueError as e:
         return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
