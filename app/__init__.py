@@ -8,6 +8,20 @@ from flask import Flask
 from app.extensions import csrf, limiter
 from config import config
 
+# Bootstrap comes from jsDelivr and the location page loads Google Maps.
+# Scripts still allow 'unsafe-inline' because the templates use inline onclick handlers.
+CONTENT_SECURITY_POLICY = '; '.join([
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://maps.googleapis.com https://maps.gstatic.com",
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+    "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    "connect-src 'self' https://maps.googleapis.com",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+])
+
 
 def create_app(config_name='development'):
     """
@@ -33,6 +47,14 @@ def create_app(config_name='development'):
     def make_session_permanent():
         from flask import session
         session.permanent = True
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers.setdefault('Content-Security-Policy', CONTENT_SECURITY_POLICY)
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        return response
 
     # Register blueprints
     from app.blueprints.admin import admin_bp
