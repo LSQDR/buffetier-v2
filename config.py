@@ -9,24 +9,24 @@ from datetime import timedelta
 
 class Config:
     """Base configuration"""
-    
+
     # Flask
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    
+
     # Session
     SESSION_COOKIE_SECURE = True  # Set True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(minutes=30)
-    
+
     # CSRF
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
-    
+
     # Rate Limiting
     RATELIMIT_STORAGE_URL = "memory://"
     RATELIMIT_DEFAULT = "200 per day, 100 per hour"
-    
+
     # Menu Cache
     MENU_CACHE_TTL = 120  # 2 minutes
 

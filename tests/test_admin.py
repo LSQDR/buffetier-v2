@@ -1,11 +1,14 @@
-import pytest
-from main import app
 import os
-import sys 
+import sys
+
+import pytest
+
+from main import app
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -72,7 +75,7 @@ def test_admin_menu_accessible_by_admin(admin_session):
 
 def test_update_order_status_requires_admin(regular_session):
     """Test that only admins can update order status"""
-    response = regular_session.post('/admin/order/1/update', 
+    response = regular_session.post('/admin/order/1/update',
                                    data={'status': 'completed'},
                                    follow_redirects=False)
     assert response.status_code in [302, 308]

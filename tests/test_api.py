@@ -1,5 +1,7 @@
-import pytest
 import json
+
+import pytest
+
 from main import app
 
 
@@ -24,22 +26,22 @@ def authenticated_client(client):
 
 class TestAPIRoutes:
     """Test suite for Flask API routes"""
-    
+
     def test_home_page(self, client):
         """Test home page loads"""
         response = client.get('/')
         assert response.status_code == 200
-    
+
     @pytest.mark.live_db
     def test_get_menu_api(self, client):
         """Test GET /api/menu endpoint"""
         response = client.get('/api/menu')
         assert response.status_code == 200
-        
+
         data = json.loads(response.data)
         assert isinstance(data, list)
         assert len(data) > 0
-    
+
     @pytest.mark.live_db
     def test_create_order_api(self, authenticated_client):
         """Test POST /api/orders endpoint"""
@@ -55,27 +57,27 @@ class TestAPIRoutes:
                 }
             ]
         }
-        
+
         response = authenticated_client.post(
             '/api/orders',
             data=json.dumps(order_data),
             content_type='application/json'
         )
-        
+
         assert response.status_code == 201
         data = json.loads(response.data)
         assert 'order_id' in data
-    
+
     @pytest.mark.live_db
     def test_get_user_orders(self, authenticated_client):
         """Test GET /api/orders/<user_id> endpoint"""
         user_id = 1
         response = authenticated_client.get(f'/api/orders/{user_id}')
         assert response.status_code == 200
-        
+
         data = json.loads(response.data)
         assert isinstance(data, list)
-    
+
     @pytest.mark.live_db
     def test_update_order_status(self, authenticated_client):
         """Test PUT /api/orders/<order_id> endpoint"""
@@ -89,44 +91,44 @@ class TestAPIRoutes:
             data=json.dumps(order_data),
             content_type='application/json'
         )
-        
+
         if create_response.status_code != 201:
             pytest.skip("Order creation failed, cannot test update")
-        
+
         order_id = json.loads(create_response.data)['order_id']
-        
+
         update_data = {"status": "completed"}
         response = authenticated_client.put(
             f'/api/orders/{order_id}',
             data=json.dumps(update_data),
             content_type='application/json'
         )
-        
+
         assert response.status_code == 200
         data = json.loads(response.data)
         assert data['status'] == 'updated'
-    
+
     def test_invalid_order_creation(self, authenticated_client):
         """Test creating order with missing data"""
         incomplete_data = {
             "table_number": 5
         }
-        
+
         response = authenticated_client.post(
             '/api/orders',
             data=json.dumps(incomplete_data),
             content_type='application/json'
         )
-        
+
         assert response.status_code == 400
-    
+
     @pytest.mark.live_db
     def test_menu_category_filter(self, client):
         """Test filtering menu by category"""
         response = client.get('/api/menu?category=Buffet')
-        
+
         assert response.status_code == 200
-        
+
         data = json.loads(response.data)
         if len(data) > 0:
             for item in data:

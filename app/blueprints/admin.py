@@ -3,12 +3,12 @@ Admin Blueprint
 Admin dashboard, order management, menu CRUD, and review moderation.
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
-from database import neon_db, mongo_db
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+
+from database import mongo_db, neon_db
 from utils.auth import admin_required
-from utils.cloud_storage import upload_menu_image, delete_menu_image
+from utils.cloud_storage import delete_menu_image, upload_menu_image
 from utils.email import send_order_status_update
-from app.extensions import csrf
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -36,7 +36,7 @@ def update_order_status_route(order_id):
     """Update order status and send email notification"""
     try:
         new_status = request.form.get('status')  # Get new status from form
-        
+
         if neon_db.update_order_status(order_id, new_status):  # Update order status
             try:
                 order = neon_db.get_order_by_id(order_id)  # Retrieve order details
@@ -49,7 +49,7 @@ def update_order_status_route(order_id):
                             order_id=order_id,
                             new_status=new_status
                         )
-                        
+
                         if email_sent:
                             flash(f'Order #{order_id} updated to {new_status} and email sent', 'success')
                         else:
@@ -58,15 +58,15 @@ def update_order_status_route(order_id):
                         flash(f'Order #{order_id} updated to {new_status}', 'success')
                 else:
                     flash(f'Order #{order_id} updated to {new_status}', 'success')
-                    
+
             except Exception as email_error:
                 print(f"Email notification failed: {email_error}")
                 flash(f'Order #{order_id} updated to {new_status}', 'success')
         else:
             flash(f'Failed to update order #{order_id}', 'error')
-            
+
         return redirect(url_for('admin.admin_dashboard'))
-        
+
     except Exception as e:
         flash(f'Error updating order: {str(e)}', 'error')
         return redirect(url_for('admin.admin_dashboard'))
@@ -170,19 +170,19 @@ def upload_image():
     try:
         if 'image' not in request.files:  # Validate file exists
             return jsonify({'error': 'No image file provided'}), 400
-        
+
         file = request.files['image']
-        
+
         if file.filename == '':  # Validate filename not empty
             return jsonify({'error': 'No file selected'}), 400
-        
+
         image_url = upload_menu_image(file)  # Upload to cloud storage
-        
+
         return jsonify({
             'success': True,
             'url': image_url
         }), 200
-        
+
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
@@ -196,16 +196,16 @@ def delete_image():
     try:
         data = request.get_json()  # Parse JSON payload
         image_url = data.get('image_url')
-        
+
         if not image_url:  # Validate URL provided
             return jsonify({'error': 'No image URL provided'}), 400
-        
+
         success = delete_menu_image(image_url)  # Delete from cloud storage
-        
+
         if success:
             return jsonify({'success': True}), 200
         else:
             return jsonify({'error': 'Failed to delete image'}), 500
-            
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500

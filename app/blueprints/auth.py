@@ -3,7 +3,8 @@ Authentication Blueprint
 Handles user login, registration, and logout
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+
 from app.extensions import limiter
 from app.models.user import User
 
@@ -19,16 +20,16 @@ def register():
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
         phone = request.form.get('phone', '').strip()
-        
+
         # Use User model for validation and creation
         success, result = User.create(name, email, password, phone)
-        
+
         if success:
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('auth.login'))
         else:
             flash(result, 'error')
-    
+
     return render_template('auth/register.html')
 
 
@@ -39,19 +40,19 @@ def login():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '')
-        
+
         # Use User model for authentication
         user = User.authenticate(email, password)
-        
+
         if user:
             session['user_id'] = user['user_id']
             session['user_name'] = user['name']
             session['is_admin'] = user.get('is_admin', False)
             flash(f'Welcome back, {user["name"]}!', 'success')
             return redirect(url_for('main.menu'))
-        
+
         flash('Invalid email or password', 'error')
-    
+
     return render_template('auth/login.html')
 
 
