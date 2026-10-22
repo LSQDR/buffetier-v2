@@ -1,0 +1,11 @@
+# Local databases for running the whole test suite. Not used in production.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: buffetier
+    ports: ["5432:5432"]
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
