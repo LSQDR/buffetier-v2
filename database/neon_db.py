@@ -417,7 +417,7 @@ def get_order_stats():
 
 
 def delete_order_with_items(order_id):
-    """Delete an order (no items table in your schema, so just delete order)"""
+    """Delete an order. ON DELETE CASCADE in the schema removes its order_items rows."""
     try:
         conn = get_neon_connection()
         cur = conn.cursor()
