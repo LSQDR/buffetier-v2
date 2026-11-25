@@ -35,11 +35,12 @@ function filterCategory(category) {
 
 /**
  * Add item to shopping cart
+ * The server looks up the name and price from the menu, so only the
+ * item ID and quantity are sent.
  * @param {string} itemId - Item ID
- * @param {string} itemName - Item name
- * @param {number} itemPrice - Item price
+ * @param {string} itemName - Item name, used for the confirmation toast
  */
-function addToCart(itemId, itemName, itemPrice) {
+function addToCart(itemId, itemName) {
 
     // Get CSRF token from meta tag
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -52,8 +53,6 @@ function addToCart(itemId, itemName, itemPrice) {
         },
         body: JSON.stringify({
             item_id: itemId,
-            name: itemName,
-            price: parseFloat(itemPrice),
             quantity: 1
         })
     })

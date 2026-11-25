@@ -82,6 +82,17 @@ def get_menu_item_by_id(item_id):
         return None
 
 
+def get_available_menu_item(item_id):
+    """
+    Get an orderable menu item by its menu code, such as BUFF001.
+
+    Returns None when no item has that code or the item is marked
+    unavailable. Connection errors are raised, not hidden, so a caller
+    can tell "not on the menu" apart from "menu unreachable".
+    """
+    return menu_collection.find_one({'item_id': item_id, 'available': True})
+
+
 def create_menu_item(item_id, name, category, description, price, available=True, image_url=''):
     """Create a new menu item"""
     try:

@@ -234,7 +234,7 @@ curl http://localhost:8080/api/menu?category=Starters
 
 **POST** `/api/cart/add`
 
-Add item to shopping cart.
+Add item to shopping cart. The name and price are read from the menu, so the request sends only the item ID and quantity. Any `name` or `price` in the body is ignored.
 
 **Auth Required:** Yes (`@login_required`)  
 **Content-Type:** `application/json`
@@ -243,11 +243,11 @@ Add item to shopping cart.
 ```json
 {
   "item_id": "STARTER_001",
-  "name": "Spring Rolls",
-  "price": 5.99,
   "quantity": 2
 }
 ```
+
+**Error Responses:** `400` for a missing item ID or a quantity below 1, `404` when the item is not on the menu or is unavailable, `503` when the menu cannot be reached.
 
 **Success Response:**
 ```json
@@ -264,8 +264,6 @@ curl -X POST http://localhost:8080/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{
     "item_id": "STARTER_001",
-    "name": "Spring Rolls",
-    "price": 5.99,
     "quantity": 2
   }'
 ```
@@ -384,7 +382,7 @@ curl -X POST http://localhost:8080/api/cart/clear \
 
 **POST** `/api/orders`
 
-Create a new order from cart items.
+Create a new order from cart items. Each item's name and price are read from the menu by `item_id`, and the total is worked out from those, so any `name` or `price` sent in the body is ignored. An item that is not on the menu rejects the whole order with `400`.
 
 **Auth Required:** Yes  
 **Content-Type:** `application/json`

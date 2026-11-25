@@ -166,8 +166,9 @@ def contains_sql_injection_patterns(text):
     """
     Check if text contains common SQL injection patterns.
 
-    Note: This is a detection mechanism. The PRIMARY defense
-    is using parameterized queries (which you already do).
+    Note: This is a detection mechanism. The primary defence is
+    parameterized queries, used for every value the app sends to
+    PostgreSQL.
 
     Args:
         text: Input string to check

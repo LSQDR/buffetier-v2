@@ -15,6 +15,47 @@ api_bp = Blueprint('api', __name__)
 
 
 # ============================================
+# MENU PRICING
+# ============================================
+
+
+def _menu_line(item_id, quantity):
+    """
+    Build a cart or order line from the menu.
+
+    Returns (line, error, status). On success error is None. The name and
+    price are always the menu's, whatever the browser sent.
+    """
+    item_id = str(item_id or '').strip()
+    if not item_id:
+        return None, 'Missing item_id', 400
+
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        return None, 'Quantity must be a whole number', 400
+    if quantity < 1:
+        return None, 'Quantity must be at least 1', 400
+
+    try:
+        menu_item = mongo_db.get_available_menu_item(item_id)
+    except Exception as e:
+        print(f"Menu lookup failed for {item_id}: {e}")
+        return None, 'Menu unavailable, please try again', 503
+
+    if menu_item is None:
+        return None, f'Item {item_id} is not on the menu', 404
+
+    line = {
+        'item_id': item_id,
+        'name': menu_item['name'],
+        'price': float(menu_item['price']),
+        'quantity': quantity,
+    }
+    return line, None, 200
+
+
+# ============================================
 # MENU API
 # ============================================
 
@@ -55,7 +96,15 @@ def create_order():
 
         user_id = data['user_id']
         table_number = data.get('table_number', 0)
-        items = data['items']
+
+        # Names and prices come from the menu, never from the request body
+        items = []
+        for requested in data['items']:
+            line, error, status = _menu_line(requested.get('item_id'), requested.get('quantity', 1))
+            if error:
+                # An unknown item makes the whole order a bad request
+                return jsonify({'error': error}), 400 if status == 404 else status
+            items.append(line)
 
         total_price = sum(item['price'] * item['quantity'] for item in items)  # Calculate total
         order_id = neon_db.create_order(  # Save order to database
@@ -121,24 +170,26 @@ def update_order(order_id):
 @api_bp.route('/cart/add', methods=['POST'])
 @login_required
 def add_to_cart():
-    """API endpoint to add item to shopping cart"""
-    data = request.get_json()  # Parse JSON request
+    """
+    API endpoint to add item to shopping cart.
 
-    if 'cart' not in session:  # Initialize cart if needed
-        session['cart'] = {}
+    Only the item ID and quantity are read from the request. The name and
+    price come from the menu, so a customer cannot set their own price.
+    """
+    data = request.get_json(silent=True) or {}
+    item_id = str(data.get('item_id', '')).strip()
 
-    cart = session['cart']
-    item_id = str(data.get('item_id'))
+    line, error, status = _menu_line(item_id, data.get('quantity', 1))
+    if error:
+        return jsonify({'success': False, 'error': error}), status
+
+    cart = session.get('cart', {})
 
     if item_id in cart:
-        cart[item_id]['quantity'] += 1  # Increment quantity if exists
+        cart[item_id]['quantity'] += line['quantity']  # Add to the existing line
+        cart[item_id]['price'] = line['price']  # Keep the current menu price
     else:
-        cart[item_id] = {  # Add new item
-            'item_id': item_id,
-            'name': data.get('name'),
-            'price': float(data.get('price')),
-            'quantity': int(data.get('quantity', 1))
-        }
+        cart[item_id] = line
 
     session['cart'] = cart
     session.modified = True  # Mark session as modified
