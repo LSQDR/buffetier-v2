@@ -44,7 +44,7 @@
             
             {% if session.get('user_id') %}
             <button class="btn btn-primary" 
-                    onclick="addToCart('{{ item.item_id }}', '{{ item.name }}', '{{ item.price }}')">
+                    onclick="addToCart('{{ item.item_id }}', '{{ item.name }}')">
                 Add to Cart
             </button>
             {% else %}
